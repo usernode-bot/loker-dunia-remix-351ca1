@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script>
+  // usernode-dev-console@1
+  (function () {
+    if (window.__usernodeDevConsole) return;
+    window.__usernodeDevConsole = true;
+    var S = '__usernodeDevConsole';
+    function serialize(v, depth) {
+      depth = depth || 0;
+      try {
+        if (v === undefined) return 'undefined';
+        if (v === null) return 'null';
+        if (typeof v === 'string') return v;
+        if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+        if (typeof v === 'function') return '[Function ' + (v.name || 'anonymous') + ']';
+        if (v instanceof Error) return (v.stack || (v.name + ': ' + v.message));
+        if (depth > 3) return '[…]';
+        var seen = new WeakSet();
+        return JSON.stringify(v, function (k, val) {
+          if (typeof val === 'object' && val !== null) {
+            if (seen.has(val)) return '[Circular]';
+            seen.add(val);
+          }
+          if (typeof val === 'function') return '[Function ' + (val.name || 'anonymous') + ']';
+          if (val instanceof Error) return val.stack || (val.name + ': ' + val.message);
+          return val;
+        });
+      } catch (e) { try { return String(v); } catch (_) { return '[unserializable]'; } }
+    }
+    function post(level, args, meta) {
+      try {
+        var payload = {
+          sentinel: S,
+          level: level,
+          args: Array.prototype.slice.call(args).map(function (a) { return serialize(a); }),
+          ts: Date.now(),
+          url: location.href,
+        };
+        if (meta) for (var k in meta) payload[k] = meta[k];
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(payload, '*');
+        }
+      } catch (_) {}
+    }
+    ['log','info','warn','error','debug'].forEach(function (level) {
+      var orig = console[level] ? console[level].bind(console) : function () {};
+      console[level] = function () { post(level, arguments); orig.apply(null, arguments); };
+    });
+    window.addEventListener('error', function (e) {
+      var msg = (e.error && (e.error.stack || e.error.message)) || e.message || 'Error';
+      post('error', [msg], { source: e.filename || '', line: e.lineno || 0, col: e.colno || 0, kind: 'error' });
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e.reason;
+      var msg = (r && (r.stack || r.message)) || String(r);
+      post('error', [msg], { kind: 'unhandledrejection' });
+    });
+    try { post('info', ['[dev-console ready]'], { kind: 'ready' }); } catch (_) {}
+  })();
+  </script>
+  <title>Loker Dunia</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><g transform='translate(14 14) scale(3)' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='10' cy='7' r='4'/><path d='M10.3 15H7a4 4 0 0 0-4 4v2'/><circle cx='17' cy='17' r='3'/><path d='m21 21-1.9-1.9'/></g></svg>">
+  <link rel="stylesheet" href="/tailwind.css">
+  <link rel="stylesheet" href="/usernode-native/v1/native.css">
+  <!-- Platform bridge and native UI kit: centrally hosted, loaded by relative path. Never vendor. -->
+  <script src="/usernode-bridge/v1/bridge.js"></script>
+  <script src="/usernode-native/v1/native.js"></script>
+  <!-- Interface text, one file per language. The list of languages is always
+       loaded, and so is English: it is the default and the fallback. Every
+       other language file is loaded only when it is chosen. -->
+  <script src="/i18n/languages.js"></script>
+  <script src="/i18n/en.js"></script>
+  <script>
+    // Language and direction before first paint, so a returning Arabic reader
+    // never sees a left-to-right flash.
+    (function () {
+      var code = 'en';
+      try { code = (JSON.parse(localStorage.getItem('lokerdunia.prefs')) || {}).lang || 'en'; } catch (e) {}
+      var l = (window.LOKER_LANGS || []).filter(function (x) { return x.code === code; })[0];
+      if (!l) return;
+      document.documentElement.lang = l.code;
+      document.documentElement.dir = l.dir;
+    })();
+  </script>
+  <script>
+    // Theme before first paint: the viewer's in-app choice wins, then the
+    // platform theme, then the OS preference.
+    (function () {
+      var media = window.matchMedia('(prefers-color-scheme: dark)');
+      function pref() { try { return localStorage.getItem('lokerdunia.theme'); } catch (e) { return null; } }
+      window.__applyTheme = function () {
+        var p = pref();
+        var theme = (p === 'light' || p === 'dark') ? p
+          : ((window.usernode && window.usernode.theme) || (media.matches ? 'dark' : 'light'));
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+        document.documentElement.style.colorScheme = theme;
+        return theme;
+      };
+      window.__applyTheme();
+      window.addEventListener('usernode:theme-changed', window.__applyTheme);
+      media.addEventListener('change', window.__applyTheme);
+    })();
+  </script>
+  <style>
+    :root { --un-accent: #2563eb; --un-accent-contrast: #ffffff; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .no-scrollbar { scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .pb-safe-nav { padding-bottom: calc(5.5rem + var(--un-safe-inset-bottom, env(safe-area-inset-bottom, 0px))); }
+    .nav-safe { padding-bottom: var(--un-safe-inset-bottom, env(safe-area-inset-bottom, 0px)); }
+    @media (min-width: 768px) { .pb-safe-nav { padding-bottom: 3rem; } }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased">
+  <a href="#view" id="skip-link" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:start-2 focus:z-50 focus:bg-white focus:text-blue-700 focus:px-3 focus:py-2 focus:rounded-lg">Skip</a>
+  <header id="hdr" class="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800"></header>
+  <main id="view" class="max-w-6xl mx-auto px-4 pt-4 pb-safe-nav" tabindex="-1"></main>
+  <nav id="bottomnav" class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800 nav-safe"></nav>
+  <div id="modal-root"></div>
+  <div id="toast-root" class="fixed inset-x-0 bottom-24 md:bottom-6 z-50 flex justify-center pointer-events-none px-4"></div>
+  <script>
+  'use strict';
+  /* ==========================================================================
+     Loker Dunia: reference data and sample content.
+     Everything below is plain data so it can later be served by an API.
+     ========================================================================== */
+
+  // ISO 3166-1 alpha-2 code : international dialling code.
+  const DIAL = 'AF:93,AL:355,DZ:213,AD:376,AO:244,AG:1,AR:54,AM:374,AU:61,AT:43,AZ:994,BS:1,BH:973,BD:880,BB:1,BY:375,BE:32,BZ:501,BJ:229,BT:975,BO:591,BA:387,BW:267,BR:55,BN:673,BG:359,BF:226,BI:257,CV:238,KH:855,CM:237,CA:1,CF:236,TD:235,CL:56,CN:86,CO:57,KM:269,CG:242,CD:243,CR:506,CI:225,HR:385,CU:53,CY:357,CZ:420,DK:45,DJ:253,DM:1,DO:1,EC:593,EG:20,SV:503,GQ:240,ER:291,EE:372,SZ:268,ET:251,FJ:679,FI:358,FR:33,GA:241,GM:220,GE:995,DE:49,GH:233,GR:30,GD:1,GT:502,GN:224,GW:245,GY:592,HT:509,HN:504,HK:852,HU:36,IS:354,IN:91,ID:62,IR:98,IQ:964,IE:353,IL:972,IT:39,JM:1,JP:81,JO:962,KZ:7,KE:254,KI:686,KP:850,KR:82,KW:965,KG:996,LA:856,LV:371,LB:961,LS:266,LR:231,LY:218,LI:423,LT:370,LU:352,MO:853,MG:261,MW:265,MY:60,MV:960,ML:223,MT:356,MH:692,MR:222,MU:230,MX:52,FM:691,MD:373,MC:377,MN:976,ME:382,MA:212,MZ:258,MM:95,NA:264,NR:674,NP:977,NL:31,NZ:64,NI:505,NE:227,NG:234,MK:389,NO:47,OM:968,PK:92,PW:680,PS:970,PA:507,PG:675,PY:595,PE:51,PH:63,PL:48,PT:351,PR:1,QA:974,RO:40,RU:7,RW:250,KN:1,LC:1,VC:1,WS:685,SM:378,ST:239,SA:966,SN:221,RS:381,SC:248,SL:232,SG:65,SK:421,SI:386,SB:677,SO:252,ZA:27,SS:211,ES:34,LK:94,SD:249,SR:597,SE:46,CH:41,SY:963,TW:886,TJ:992,TZ:255,TH:66,TL:670,TG:228,TO:676,TT:1,TN:216,TR:90,TM:993,TV:688,UG:256,UA:380,AE:971,GB:44,US:1,UY:598,UZ:998,VU:678,VA:39,VE:58,VN:84,YE:967,ZM:260,ZW:263'
+    .split(',').reduce((m, p) => { const [c, d] = p.split(':'); m[c] = d; return m; }, {});
+  const COUNTRY_CODES = Object.keys(DIAL);
+
+  // Static exchange rates: units of each currency per 1 USD.
+  // Approximate values, fixed on RATES_DATE. Not live market data.
+  const RATES_DATE = '2026-10-01';
+  const RATES = {
+    USD: 1, IDR: 16300, EUR: 0.92, GBP: 0.78, JPY: 148, SGD: 1.33, AUD: 1.52, CAD: 1.37,
+    AED: 3.6725, BRL: 5.4, NGN: 1550, INR: 84, MYR: 4.4, CHF: 0.86, ZAR: 18, KES: 129,
+    MXN: 18.5, KRW: 1370, NZD: 1.66, SEK: 10.5, CNY: 7.2, PHP: 57, THB: 35, VND: 25000,
+    SAR: 3.75, QAR: 3.64, EGP: 49, PLN: 3.95,
+  };
+  const COUNTRY_CURRENCY = {
+    ID: 'IDR', SG: 'SGD', JP: 'JPY', DE: 'EUR', FR: 'EUR', NL: 'EUR', IT: 'EUR', ES: 'EUR', EE: 'EUR', IE: 'EUR',
+    AT: 'EUR', BE: 'EUR', FI: 'EUR', PT: 'EUR', GR: 'EUR', GB: 'GBP', US: 'USD', CA: 'CAD', AU: 'AUD',
+    AE: 'AED', BR: 'BRL', NG: 'NGN', IN: 'INR', MY: 'MYR', CH: 'CHF', ZA: 'ZAR', KE: 'KES', MX: 'MXN',
+    KR: 'KRW', NZ: 'NZD', SE: 'SEK', CN: 'CNY', PH: 'PHP', TH: 'THB', VN: 'VND', SA: 'SAR', QA: 'QAR',
+    EG: 'EGP', PL: 'PLN',
+  };
+  const COUNTRY_TZ = {
+    ID: 'WIB (UTC+7)', SG: 'SGT (UTC+8)', JP: 'JST (UTC+9)', DE: 'CET (UTC+1)', GB: 'GMT (UTC+0)',
+    US: 'ET (UTC-5)', CA: 'ET (UTC-5)', AU: 'AEST (UTC+10)', AE: 'GST (UTC+4)', BR: 'BRT (UTC-3)',
+    NG: 'WAT (UTC+1)', KE: 'EAT (UTC+3)', IN: 'IST (UTC+5:30)', NL: 'CET (UTC+1)', MY: 'MYT (UTC+8)',
+    EE: 'EET (UTC+2)', PH: 'PHT (UTC+8)', KR: 'KST (UTC+9)', ZA: 'SAST (UTC+2)', CH: 'CET (UTC+1)',
+    MX: 'CST (UTC-6)',
+  };
+
+  const CATEGORIES = ['it', 'health', 'education', 'finance', 'engineering', 'creative', 'marketing', 'sales', 'hospitality', 'logistics', 'agriculture'];
+  const JOB_TYPES = ['fulltime', 'parttime', 'internship', 'contract'];
+  const WORK_MODELS = ['onsite', 'hybrid', 'remote'];
+  const EDU_LEVELS = ['sma', 'd3', 's1', 's2', 's3'];
+  const LANG_LEVELS = ['basic', 'intermediate', 'fluent', 'native'];
+  const LANG_CODES = ['id', 'en', 'ja', 'de', 'fr', 'es', 'pt', 'zh', 'ko', 'ar', 'ms', 'nl', 'it', 'hi', 'ru', 'th', 'vi', 'tl', 'sw', 'yo', 'ha', 'ig', 'jv', 'su', 'tr', 'pl', 'sv'];
+  const STATUSES = ['new', 'processing', 'interview', 'accepted', 'rejected'];
+
+  // Skill catalogue that powers autocomplete. Users may still type their own.
+  const SKILL_CATALOG = [
+    'JavaScript', 'TypeScript', 'React', 'Next.js', 'Vue.js', 'Angular', 'Node.js', 'Go', 'Python', 'Java',
+    'Spring Boot', 'Kotlin', 'Swift', 'iOS', 'Android', 'React Native', 'Flutter', 'PHP', 'Laravel', 'Ruby on Rails',
+    'C#', '.NET', 'C++', 'Rust', 'SQL', 'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'GraphQL', 'REST API',
+    'Microservices', 'Kafka', 'Docker', 'Kubernetes', 'Terraform', 'AWS', 'Google Cloud', 'Azure', 'CI/CD', 'Linux',
+    'Git', 'Prometheus', 'Machine Learning', 'Deep Learning', 'PyTorch', 'TensorFlow', 'MLOps', 'Spark', 'Airflow',
+    'Statistics', 'Data Analysis', 'Data Visualization', 'Power BI', 'Tableau', 'Excel', 'Selenium', 'Test Automation',
+    'HTML', 'CSS', 'Figma', 'UI Design', 'UX Research', 'Prototyping', 'Usability Testing', 'Adobe Illustrator',
+    'Photoshop', 'Branding', 'Typography', 'Motion Graphics', 'Copywriting', 'Content Marketing', 'SEO', 'Google Ads',
+    'Google Analytics', 'Social Media Marketing', 'Technical Writing', 'API Documentation', 'Markdown',
+    'Product Management', 'Agile', 'Scrum', 'Stakeholder Management', 'Manajemen Proyek', 'Manajemen Tim',
+    'Manajemen Operasional', 'Financial Modeling', 'Valuation', 'Bloomberg Terminal', 'Akuntansi', 'IFRS', 'SAP',
+    'Perpajakan', 'Audit', 'Supply Chain Management', 'Manajemen Gudang', 'Keperawatan', 'BLS/CPR', 'ACLS',
+    'Rekam Medis Elektronik', 'Perawatan Luka', 'Perawatan Intensif', 'Epidemiologi', 'Clinical Trials',
+    'Good Clinical Practice', 'Medical Writing', 'Manajemen Program', 'Pengajaran Bahasa Inggris', 'Manajemen Kelas',
+    'Desain Kurikulum', 'Pendidikan Anak', 'Public Speaking', 'Komunikasi', 'Layanan Pelanggan', 'Penanganan Keluhan',
+    'Manajemen Reservasi', 'Opera PMS', 'Revenue Management', 'Barista', 'Food Safety', 'Zendesk', 'HubSpot CRM',
+    'Penjualan B2B', 'Negosiasi', 'SolidWorks', 'AutoCAD', 'Civil 3D', 'CAD', 'FEA', 'GD&T', 'Six Sigma',
+    'Structural Analysis', 'Agronomi', 'Analisis Tanah', 'Riset',
+  ];
+
+
+  /* ==========================================================================
+     Interface text lives in public/i18n/<code>.js, one file per language,
+     listed in public/i18n/languages.js. English is the default and the
+     fallback for missing keys; any other file is loaded when it is chosen.
+     Job content written by employers stays in the language it was posted in.
+     ========================================================================== */
+  const LANG_META = Object.fromEntries((window.LOKER_LANGS || []).map(l => [l.code, l]));
+  const LANGS = Object.keys(LANG_META);
+  const DEFAULT_LANG = 'en';
+  // Loads public/i18n/<code>.js once. Resolves when its strings are registered.
+  const langLoads = {};
+  function loadLang(code) {
+    if (window.LOKER_I18N[code]) return Promise.resolve();
+    return langLoads[code] = langLoads[code] || new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = '/i18n/' + code + '.js';
+      s.onload = () => window.LOKER_I18N[code] ? resolve() : reject(new Error('no strings for ' + code));
+      s.onerror = () => reject(new Error('could not load ' + code));
+      document.head.appendChild(s);
+    }).catch(e => { delete langLoads[code]; throw e; });
+  }
+
+  /* ==========================================================================
+     State: a client-side cache of what the server returned. The server
+     (lib/routes.js, Postgres) owns every record; `api` below is the only code
+     that talks to it, and it keeps this cache in step after each write.
+     ========================================================================== */
+  const PREF_KEY = 'lokerdunia.prefs';
+  const DAY = 86400000;
+  const db = { companies: [], profiles: [], skills: [], certificates: [], jobs: [], applications: [], savedJobIds: [] };
+  // { userId, username, role, activeCompanyId, profileId, ownedCompanyIds, demoCompanyIds }
+  let me = null;
+  let loadState = 'loading';
+
+  function readJson(key) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+  // prefs.lang is only set when the viewer picks a language themselves.
+  const prefs = Object.assign({ cur: 'local' }, readJson(PREF_KEY) || {});
+  // The viewer's saved choice; English until they pick another.
+  let lang = LANGS.includes(prefs.lang) ? prefs.lang : DEFAULT_LANG;
+  function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {} }
+
+  // Homeroom identity (display only; the server already verified the token).
+  const TOKEN = new URLSearchParams(location.search).get('token') || '';
+  const HR_USER = (() => {
+    try { const p = JSON.parse(atob(TOKEN.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); return p.username || null; }
+    catch (e) { return null; }
+  })();
+
+  /* ---------- small helpers ---------- */
+  function uid(p) { return p + Math.random().toString(36).slice(2, 10); }
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function t(key, vars) {
+    const cur = window.LOKER_I18N[lang];
+    let s = (cur && cur.strings[key]) ?? window.LOKER_I18N[DEFAULT_LANG].strings[key] ?? key;
+    if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
+    return s;
+  }
+  function locale() { return (LANG_META[lang] && LANG_META[lang].locale) || lang; }
+  function flag(cc) {
+    if (!cc || cc.length !== 2) return '🌐';
+    return String.fromCodePoint(...cc.toUpperCase().split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+  }
+  const nameCache = {};
+  function displayName(type, code) {
+    const k = lang + type;
+    try { nameCache[k] = nameCache[k] || new Intl.DisplayNames([lang], { type }); return nameCache[k].of(code) || code; }
+    catch (e) { return code; }
+  }
+  const countryName = cc => displayName('region', cc);
+  const langName = code => displayName('language', code);
+  function sortedCountries() { return COUNTRY_CODES.slice().sort((a, b) => countryName(a).localeCompare(countryName(b), lang)); }
+
+  function fmtMoney(amount, cur, compact) {
+    try {
+      return new Intl.NumberFormat(locale(), { style: 'currency', currency: cur, notation: compact ? 'compact' : 'standard', maximumFractionDigits: compact ? 1 : 0 }).format(amount);
+    } catch (e) { return cur + ' ' + Math.round(amount); }
+  }
+  function convert(amount, from, to) { return amount / RATES[from] * RATES[to]; }
+  function monthly(amount, period) { return period === 'year' ? amount / 12 : period === 'hour' ? amount * 160 : amount; }
+  function salaryText(j) {
+    return fmtMoney(j.salaryMin, j.currency, true) + '–' + fmtMoney(j.salaryMax, j.currency, true) + t('per_' + j.period);
+  }
+  function salaryConverted(j) {
+    const to = prefs.cur;
+    if (to === 'local' || to === j.currency || !RATES[j.currency]) return '';
+    return '≈ ' + fmtMoney(convert(j.salaryMin, j.currency, to), to, true) + '–' + fmtMoney(convert(j.salaryMax, j.currency, to), to, true) + t('per_' + j.period);
+  }
+  function fmtDate(iso, opts) {
+    if (!iso) return '';
+    const d = new Date(iso.length <= 7 ? iso + '-01' : iso);
+    if (isNaN(d)) return '';
+    return new Intl.DateTimeFormat(locale(), opts || { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  }
+  function fmtMonth(ym) { return fmtDate(ym, { month: 'short', year: 'numeric' }); }
+  function relDays(iso) {
+    const days = Math.round((Date.now() - new Date(iso).getTime()) / DAY);
+    try { return new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }).format(-days, 'day'); } catch (e) { return days + 'd'; }
+  }
+  function fmtNum(n) { return new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(n); }
+  function today() { return new Date().toISOString().slice(0, 10); }
+
+  /* ---------- lookups ---------- */
+  const currentUser = () => (me && me.role ? me : null);
+  const role = () => (me && me.role) || 'guest';
+  const getProfile = id => db.profiles.find(p => p.id === id) || null;
+  const myProfile = () => (me && me.profileId ? getProfile(me.profileId) : null);
+  const myCompany = () => (me && me.role === 'company' && me.activeCompanyId ? db.companies.find(c => c.id === me.activeCompanyId) || null : null);
+  const getJob = id => db.jobs.find(j => j.id === id) || null;
+  const companyOf = j => db.companies.find(c => c.id === j.companyId) || { name: '?', id: '' };
+  const skillsOf = pid => db.skills.filter(s => s.profileId === pid);
+  const certsOf = pid => db.certificates.filter(c => c.profileId === pid);
+  // Hidden certificates are not sent at all, so counts come from the server.
+  const certCount = p => (p.certCount != null ? p.certCount : certsOf(p.id).length);
+  const jobSkills = j => j.required.concat(j.nice).map(s => s.name);
+  const isSaved = id => db.savedJobIds.includes(id);
+
+  function certExpired(c) { return !!c.expiryDate && c.expiryDate < today(); }
+  // certified: a valid certificate proves it; expired: only expired ones do; none.
+  function skillProof(pid, name) {
+    const n = name.toLowerCase();
+    const held = skillsOf(pid).find(s => s.name.toLowerCase() === n);
+    if (held && held.proof) return held.proof;
+    const cs = certsOf(pid).filter(c => (c.skills || []).some(s => s.toLowerCase() === n));
+    if (!cs.length) return 'none';
+    return cs.some(c => !certExpired(c)) ? 'certified' : 'expired';
+  }
+  function experienceYears(p) {
+    let months = 0;
+    (p.experience || []).forEach(x => {
+      if (!x.start) return;
+      const [sy, sm] = x.start.split('-').map(Number);
+      const endStr = x.current || !x.end ? today().slice(0, 7) : x.end;
+      const [ey, em] = endStr.split('-').map(Number);
+      months += Math.max(0, (ey - sy) * 12 + (em - sm));
+    });
+    return Math.round(months / 12 * 10) / 10;
+  }
+
+  // Match score. Required skills weigh 2, nice-to-have 1. A skill held at the
+  // asked level counts fully, one level below 60%, two below 30%. Proof
+  // multiplier: certified 100%, uncertified or expired 75%.
+  const PROOF_WEIGHT = { certified: 1, expired: 0.75, none: 0.75 };
+  function matchJob(job, pid) {
+    const mine = {};
+    skillsOf(pid).forEach(s => { mine[s.name.toLowerCase()] = s; });
+    let total = 0, got = 0;
+    const matched = [], missing = [];
+    [[job.required, 2, 'req'], [job.nice, 1, 'nice']].forEach(([list, w, kind]) => list.forEach(s => {
+      total += w;
+      const u = mine[s.name.toLowerCase()];
+      if (!u) { missing.push({ ...s, kind }); return; }
+      const f = u.level >= s.level ? 1 : (u.level === s.level - 1 ? 0.6 : 0.3);
+      const proof = skillProof(pid, s.name);
+      got += w * f * PROOF_WEIGHT[proof];
+      if (f < 1) missing.push({ ...s, kind, have: u.level });
+      else matched.push({ ...s, kind, proof });
+    }));
+    return { pct: total ? Math.round(got / total * 100) : 0, matched, missing };
+  }
+
+  function completeness(p) {
+    const items = [
+      ['photo', 10, !!p.photo],
+      ['bio', 15, !!(p.fullName && p.birthDate && p.country && p.city && p.email)],
+      ['phone', 5, !!p.phone],
+      ['summary', 10, (p.summary || '').length >= 30],
+      ['education', 15, (p.education || []).length > 0],
+      ['experience', 15, (p.experience || []).length > 0],
+      ['skills', 15, skillsOf(p.id).length >= 3],
+      ['languages', 5, (p.languages || []).length > 0],
+      ['certs', 10, certCount(p) > 0],
+    ];
+    const pct = items.reduce((s, [, w, ok]) => s + (ok ? w : 0), 0);
+    return { pct, missing: items.filter(i => !i[2]).map(i => i[0]) };
+  }
+
+  /* ---------- api: the only code that talks to the server ---------- */
+  async function request(method, path, body) {
+    const headers = { 'content-type': 'application/json' };
+    if (TOKEN) headers['x-usernode-token'] = TOKEN;
+    const res = await fetch('/api' + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    let data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok) { const err = new Error((data && data.error) || 'http_' + res.status); err.status = res.status; err.code = data && data.error; throw err; }
+    return data;
+  }
+  function mergeProfile(p) {
+    const { skills, certificates, ...rest } = p;
+    db.profiles = db.profiles.filter(x => x.id !== p.id).concat(rest);
+    db.skills = db.skills.filter(x => x.profileId !== p.id).concat(skills);
+    db.certificates = db.certificates.filter(x => x.profileId !== p.id).concat(certificates);
+  }
+  const api = {
+    async bootstrap() {
+      const d = await request('GET', '/bootstrap');
+      me = d.me;
+      db.companies = d.companies; db.jobs = d.jobs; db.savedJobIds = d.savedJobIds;
+      db.applications = d.applications;
+      db.profiles = []; db.skills = []; db.certificates = [];
+      if (d.profile) mergeProfile(d.profile);
+    },
+    async searchJobs(f) { await sleep(150); return filterJobs(f); },
+    async getJob(id) { await sleep(150); return getJob(id); },
+    async setRole(role, companyId) {
+      const d = await request('POST', '/me/role', { role, companyId });
+      me.role = d.role; me.activeCompanyId = d.activeCompanyId;
+    },
+    async createCompany(body) {
+      const { company } = await request('POST', '/companies', body);
+      db.companies.push(company); me.ownedCompanyIds.push(company.id);
+      me.role = 'company'; me.activeCompanyId = company.id;
+      return company;
+    },
+    async saveProfile(payload) {
+      const { profile } = await request('PUT', '/profile', payload);
+      mergeProfile(profile); me.profileId = profile.id; me.role = 'seeker'; me.activeCompanyId = null;
+      return profile;
+    },
+    async setPrivacy(privacy) {
+      const d = await request('PUT', '/profile/privacy', privacy);
+      const p = myProfile(); if (p) p.privacy = d.privacy;
+    },
+    async loadProfile(id) {
+      const { profile } = await request('GET', '/profiles/' + encodeURIComponent(id));
+      if (!(me && me.profileId === id)) mergeProfile(profile);
+      return profile;
+    },
+    async apply(jobId, certIds, message) {
+      const { application } = await request('POST', '/jobs/' + encodeURIComponent(jobId) + '/apply', { certIds, message });
+      db.applications.unshift(application); return application;
+    },
+    async createJob(job) { const d = await request('POST', '/jobs', job); db.jobs.unshift(d.job); return d.job; },
+    // Every application to one company's jobs, from any applicant's device.
+    async loadCompanyApplications(companyId) {
+      const d = await request('GET', '/companies/' + encodeURIComponent(companyId) + '/applications');
+      const ids = new Set(d.applications.map(a => a.id));
+      db.applications = db.applications.filter(a => !ids.has(a.id)).concat(d.applications);
+      d.profiles.forEach(p => { if (!(me && me.profileId === p.id)) mergeProfile(p); });
+    },
+    async setStatus(appId, status) {
+      const { application } = await request('PATCH', '/applications/' + encodeURIComponent(appId), { status });
+      const a = db.applications.find(x => x.id === appId); if (a) a.status = application.status;
+      return application;
+    },
+    async toggleBookmark(jobId) {
+      const was = isSaved(jobId);
+      db.savedJobIds = was ? db.savedJobIds.filter(x => x !== jobId) : [jobId].concat(db.savedJobIds);
+      try { await request(was ? 'DELETE' : 'PUT', '/saved/' + encodeURIComponent(jobId)); }
+      catch (e) { db.savedJobIds = was ? [jobId].concat(db.savedJobIds) : db.savedJobIds.filter(x => x !== jobId); throw e; }
+      return !was;
+    },
+  };
+
+  // Files go to the platform's storage through the bridge; only the returned
+  // URL is saved. Platform storage takes images only, and it is missing when
+  // the app runs outside Homeroom, so callers get null there and say so.
+  function dataUrlToFile(dataUrl, name) {
+    const [head, b64] = dataUrl.split(',');
+    const type = head.slice(5, head.indexOf(';'));
+    const bin = atob(b64); const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const ext = type === 'image/png' ? '.png' : type === 'image/webp' ? '.webp' : '.jpg';
+    return new File([arr], (name || 'file').replace(/\.[^.]+$/, '') + ext, { type });
+  }
+  async function uploadImage(dataUrl, name, visibility) {
+    if (!(window.usernode && typeof usernode.uploadFile === 'function')) return null;
+    try { return await usernode.uploadFile(dataUrlToFile(dataUrl, name), { visibility }); }
+    catch (e) { console.warn('upload unavailable: ' + (e && e.message)); return null; }
+  }
+  // Private platform files need the viewer's token on the image request.
+  function fileSrc(file) {
+    if (!file) return '';
+    if (file.dataUrl) return file.dataUrl;
+    if (!file.url) return '';
+    if (TOKEN && file.url.includes('/app-files/')) return file.url + (file.url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN);
+    return file.url;
+  }
+
+  /* ---------- search ---------- */
+  const emptyFilters = () => ({ q: '', country: '', city: '', category: '', types: [], models: [], salaryMin: '', salaryMax: '', skills: [], rw: false, visa: false, relo: false });
+  let filters = emptyFilters();
+  const ui = { matchMode: false, sort: 'newest' };
+  function filterCurrency() { return prefs.cur === 'local' ? 'USD' : prefs.cur; }
+  function filterJobs(f) {
+    const words = f.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const fc = filterCurrency();
+    return db.jobs.filter(j => {
+      if (words.length) {
+        const hay = [j.title, companyOf(j).name, j.city, countryName(j.country), t('cat_' + j.category)].concat(jobSkills(j)).join(' ').toLowerCase();
+        if (!words.every(w => hay.includes(w))) return false;
+      }
+      if (f.country && j.country !== f.country) return false;
+      if (f.city && !j.city.toLowerCase().includes(f.city.trim().toLowerCase())) return false;
+      if (f.category && j.category !== f.category) return false;
+      if (f.types.length && !f.types.includes(j.type)) return false;
+      if (f.models.length && !f.models.includes(j.model)) return false;
+      if (f.skills.length && !f.skills.every(s => jobSkills(j).some(x => x.toLowerCase() === s.toLowerCase()))) return false;
+      if (f.rw && !j.remoteWorldwide) return false;
+      if (f.visa && !j.visaSponsor) return false;
+      if (f.relo && !j.relocation) return false;
+      const lo = convert(monthly(j.salaryMin, j.period), j.currency, fc);
+      const hi = convert(monthly(j.salaryMax, j.period), j.currency, fc);
+      if (f.salaryMin !== '' && hi < Number(f.salaryMin)) return false;
+      if (f.salaryMax !== '' && lo > Number(f.salaryMax)) return false;
+      return true;
+    });
+  }
+  function sortJobs(list) {
+    const p = myProfile();
+    const usd = j => convert(monthly(j.salaryMax, j.period), j.currency, 'USD');
+    if (ui.matchMode && p) return list.slice().sort((a, b) => matchJob(b, p.id).pct - matchJob(a, p.id).pct);
+    if (ui.sort === 'salary') return list.slice().sort((a, b) => usd(b) - usd(a));
+    return list.slice().sort((a, b) => b.postedAt.localeCompare(a.postedAt));
+  }
+  function activeFilterCount() {
+    const f = filters;
+    return [f.country, f.city, f.category, f.salaryMin, f.salaryMax].filter(Boolean).length + f.types.length + f.models.length + f.skills.length + [f.rw, f.visa, f.relo].filter(Boolean).length;
+  }
+
+  /* ==========================================================================
+     UI primitives
+     ========================================================================== */
+  const ICONS = {
+    home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    bookmark: '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
+    trending: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+    user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    briefcase: '<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+    seeker: '<circle cx="10" cy="7" r="4"/><path d="M10.3 15H7a4 4 0 0 0-4 4v2"/><circle cx="17" cy="17" r="3"/><path d="m21 21-1.9-1.9"/>',
+    globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+    moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+    sliders: '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+    back: '<path d="m15 18-6-6 6-6"/>',
+    chevron: '<path d="m9 18 6-6-6-6"/>',
+    down: '<path d="m6 9 6 6 6-6"/>',
+    languages: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    award: '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    dashboard: '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+    sparkle: '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
+  };
+  // Arrows that mean "back" or "forward" point the other way in right-to-left languages.
+  const MIRRORED_ICONS = { back: 1, chevron: 1 };
+  function icon(name, cls) {
+    return '<svg class="' + (cls || 'w-5 h-5') + (MIRRORED_ICONS[name] ? ' rtl:-scale-x-100' : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + '</svg>';
+  }
+
+  const C = {
+    card: 'rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800',
+    section: 'rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 md:p-5',
+    btnPrimary: 'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950',
+    btnSecondary: 'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium px-4 py-2.5 text-sm disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+    btnGhost: 'inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+    btnIcon: 'inline-flex items-center justify-center w-10 h-10 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+    input: 'w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+    inputErr: 'w-full rounded-xl border border-red-500 bg-white dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500',
+    label: 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1',
+    chip: 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    chipBlue: 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+    muted: 'text-slate-500 dark:text-slate-400',
+    h1: 'text-2xl font-bold tracking-tight',
+    h2: 'text-lg font-semibold',
+    err: 'mt-1 text-xs text-red-600 dark:text-red-400',
+    divider: 'divide-y divide-slate-200 dark:divide-slate-800',
+  };
+  // Skill chip colour by level: Pemula, Menengah, Mahir.
+  const LEVEL_CHIP = {
+    1: 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    2: 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
+    3: 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium bg-blue-600 text-white',
+  };
+  const STATUS_CHIP = {
+    new: 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+    processing: 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+    interview: 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+    accepted: 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+    rejected: 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+  };
+  function matchChip(pct) {
+    const cls = pct >= 75 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+      : pct >= 45 ? 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+    return '<span data-testid="match-pct" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ' + cls + '">' + t('matchPct', { n: pct }) + '</span>';
+  }
+  function matchBar(pct) {
+    const cls = pct >= 75 ? 'bg-emerald-500' : pct >= 45 ? 'bg-amber-500' : 'bg-slate-400';
+    return '<div class="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden"><div class="h-full rounded-full ' + cls + '" style="width:' + pct + '%"></div></div>';
+  }
+  function proofBadge(proof) {
+    if (proof === 'certified') return '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">' + t('certified') + '</span>';
+    if (proof === 'expired') return '<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300">' + icon('alert', 'w-3 h-3') + t('certExpiredBadge') + '</span>';
+    return '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">' + t('noProof') + '</span>';
+  }
+  function avatar(src, name, cls) {
+    cls = cls || 'w-12 h-12';
+    if (src) return '<img src="' + esc(src) + '" alt="" class="' + cls + ' rounded-full object-cover bg-slate-200 dark:bg-slate-800 shrink-0">';
+    const ini = (name || '?').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    return '<span class="' + cls + ' rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-semibold flex items-center justify-center shrink-0">' + esc(ini) + '</span>';
+  }
+  function companyLogo(name) {
+    const ini = (name || '?').replace(/^(PT|RS)\s+/, '').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    return '<span class="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm flex items-center justify-center shrink-0" aria-hidden="true">' + esc(ini) + '</span>';
+  }
+  function backLink(href, label) {
+    return '<a href="' + href + '" class="' + C.btnGhost + ' -ms-2 mb-2">' + icon('back', 'w-4 h-4') + esc(label) + '</a>';
+  }
+  function emptyState(title, body, actionHtml) {
+    return '<div data-testid="empty-state" class="text-center py-12 px-4"><div class="mx-auto w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300 flex items-center justify-center mb-3">' + icon('search') + '</div>' +
+      '<h2 class="font-semibold">' + esc(title) + '</h2><p class="mt-1 text-sm ' + C.muted + '">' + esc(body) + '</p>' + (actionHtml ? '<div class="mt-4">' + actionHtml + '</div>' : '') + '</div>';
+  }
+  function skeletonCards(n) {
+    let s = '<div class="grid gap-3 sm:grid-cols-2" aria-busy="true" aria-label="' + esc(t('loading')) + '">';
+    for (let i = 0; i < n; i++) s += '<div class="' + C.card + ' p-4 animate-pulse motion-reduce:animate-none"><div class="flex gap-3"><div class="w-11 h-11 rounded-xl bg-slate-200 dark:bg-slate-800"></div><div class="flex-1 space-y-2"><div class="h-4 rounded bg-slate-200 dark:bg-slate-800 w-3/4"></div><div class="h-3 rounded bg-slate-200 dark:bg-slate-800 w-1/2"></div></div></div><div class="mt-4 h-3 rounded bg-slate-200 dark:bg-slate-800 w-2/3"></div><div class="mt-3 flex gap-2"><div class="h-6 w-16 rounded-full bg-slate-200 dark:bg-slate-800"></div><div class="h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-800"></div></div></div>';
+    return s + '</div>';
+  }
+  function spinner() {
+    return '<div class="flex justify-center py-16" aria-busy="true"><span class="sr-only">' + esc(t('loading')) + '</span><span class="w-8 h-8 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin motion-reduce:animate-none"></span></div>';
+  }
+
+  /* ---------- toast & modal ---------- */
+  function toast(msg) {
+    if (window.unNative && typeof unNative.toast === 'function') { try { unNative.toast(msg); return; } catch (e) {} }
+    const root = $('#toast-root');
+    root.innerHTML = '<div role="status" class="pointer-events-auto rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 text-sm font-medium shadow-lg flex items-center gap-2">' + icon('check', 'w-4 h-4') + esc(msg) + '</div>';
+    clearTimeout(toast._t); toast._t = setTimeout(() => { root.innerHTML = ''; }, 2600);
+  }
+  let modalClose = null;
+  function openModal(html, opts) {
+    opts = opts || {};
+    const root = $('#modal-root');
+    const prevFocus = document.activeElement;
+    root.innerHTML = '<div class="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">' +
+      '<div data-action="modal-close" class="absolute inset-0 bg-slate-950/50"></div>' +
+      '<div role="dialog" aria-modal="true" aria-label="' + esc(opts.title || '') + '" class="relative w-full ' + (opts.wide ? 'md:max-w-2xl' : 'md:max-w-lg') + ' bg-white dark:bg-slate-900 rounded-t-2xl md:rounded-2xl shadow-xl flex flex-col" style="max-height:90vh">' +
+      '<div class="flex items-center justify-between gap-3 px-4 pt-4 pb-3 border-b border-slate-200 dark:border-slate-800"><h2 class="' + C.h2 + '">' + esc(opts.title || '') + '</h2>' +
+      '<button type="button" data-action="modal-close" class="' + C.btnIcon + '" aria-label="' + esc(t('close')) + '">' + icon('x') + '</button></div>' +
+      '<div class="overflow-y-auto px-4 py-4 nav-safe" data-modal-body>' + html + '</div></div></div>';
+    modalClose = () => { root.innerHTML = ''; modalClose = null; if (opts.onClose) opts.onClose(); if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true }); };
+    const first = root.querySelector('[autofocus]') || root.querySelector('input,select,textarea,button:not([data-action="modal-close"])');
+    if (first) first.focus({ preventScroll: true });
+    return root;
+  }
+  function closeModal() { if (modalClose) modalClose(); }
+
+  /* ---------- pickers ---------- */
+  // Interface language: every entry in public/i18n/languages.js, by its own
+  // name with its name in the current language underneath. Searchable.
+  function openLanguagePicker() {
+    const en = new Intl.DisplayNames(['en'], { type: 'language' });
+    const enName = c => { try { return en.of(c) || c; } catch (e) { return c; } };
+    const list = LANGS.slice().sort((a, b) => (a === lang ? -1 : b === lang ? 1 : langName(a).localeCompare(langName(b), lang)));
+    const row = c => {
+      const m = LANG_META[c], here = langName(c), on = c === lang;
+      return '<li><button type="button" data-pick-lang="' + c + '" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-start hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"' + (on ? ' aria-current="true"' : '') +
+        ' data-search="' + esc([m.name, here, enName(c), c].join(' ').toLowerCase()) + '">' +
+        '<span class="flex-1 min-w-0"><span lang="' + c + '" dir="' + m.dir + '" class="block text-sm' + (on ? ' font-semibold' : '') + '">' + esc(m.name) + '</span>' +
+        (here !== m.name ? '<span class="block text-xs ' + C.muted + '">' + esc(here) + '</span>' : '') + '</span>' +
+        (on ? '<span class="text-blue-600 dark:text-blue-400">' + icon('check', 'w-4 h-4') + '</span>' : '') + '</button></li>';
+    };
+    const root = openModal(
+      '<input type="search" autofocus data-lang-search class="' + C.input + '" placeholder="' + esc(t('searchLanguage')) + '" aria-label="' + esc(t('searchLanguage')) + '">' +
+      '<ul class="mt-3 space-y-0.5" data-testid="lang-list">' + list.map(row).join('') + '</ul>' +
+      '<div data-lang-empty hidden class="py-8 text-center"><p class="font-medium">' + esc(t('noLanguage')) + '</p><p class="text-sm ' + C.muted + '">' + esc(t('noLanguageBody')) + '</p></div>',
+      { title: t('appLanguage') });
+    root.querySelector('[data-lang-search]').addEventListener('input', e => {
+      const q = e.target.value.trim().toLowerCase();
+      let shown = 0;
+      root.querySelectorAll('[data-pick-lang]').forEach(b => {
+        const hit = !q || b.dataset.search.includes(q);
+        b.parentElement.hidden = !hit; if (hit) shown++;
+      });
+      root.querySelector('[data-lang-empty]').hidden = shown > 0;
+    });
+    root.querySelector('[data-testid=lang-list]').addEventListener('click', async e => {
+      const b = e.target.closest('[data-pick-lang]'); if (!b) return;
+      const code = b.dataset.pickLang;
+      if (code === lang) { closeModal(); return; }
+      b.setAttribute('aria-busy', 'true');
+      try { await loadLang(code); }
+      catch (err) { console.warn(err.message); b.removeAttribute('aria-busy'); toast(t('loadFailed')); return; }
+      closeModal();
+      lang = code; prefs.lang = code; savePrefs(); render();
+    });
+  }
+  // Searchable picker over every country. onPick(code|'' for all).
+  function openCountryPicker(onPick, opts) {
+    opts = opts || {};
+    const counts = {};
+    db.jobs.forEach(j => { counts[j.country] = (counts[j.country] || 0) + 1; });
+    const list = sortedCountries();
+    const row = cc => '<li><button type="button" data-pick="' + cc + '" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-start hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"><span class="text-xl" aria-hidden="true">' + flag(cc) + '</span><span class="flex-1 text-sm">' + esc(countryName(cc)) + '</span>' +
+      (opts.showCounts && counts[cc] ? '<span class="text-xs ' + C.muted + '">' + t('nJobs', { n: counts[cc] }) + '</span>' : '') + '</button></li>';
+    const root = openModal(
+      '<input type="search" autofocus data-country-search class="' + C.input + '" placeholder="' + esc(t('searchCountry')) + '" aria-label="' + esc(t('searchCountry')) + '">' +
+      '<ul class="mt-3 space-y-0.5" data-country-list>' +
+      (opts.allowAll ? '<li><button type="button" data-pick="" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-start hover:bg-slate-100 dark:hover:bg-slate-800"><span class="text-xl" aria-hidden="true">🌐</span><span class="flex-1 text-sm font-medium">' + esc(t('allCountries')) + '</span></button></li>' : '') +
+      list.map(row).join('') + '</ul>', { title: opts.title || t('chooseCountry') });
+    root.querySelector('[data-country-search]').addEventListener('input', e => {
+      const q = e.target.value.trim().toLowerCase();
+      root.querySelectorAll('[data-pick]').forEach(b => {
+        const cc = b.dataset.pick;
+        const hit = !q || (cc && (countryName(cc).toLowerCase().includes(q) || cc.toLowerCase() === q));
+        b.parentElement.hidden = !hit;
+      });
+    });
+    root.querySelector('[data-country-list]').addEventListener('click', e => {
+      const b = e.target.closest('[data-pick]'); if (!b) return;
+      closeModal(); onPick(b.dataset.pick);
+    });
+  }
+
+  // Skill input with suggestions. Markup: a wrapper [data-skill-input="<key>"]
+  // containing the input; handlers registered in SKILL_ADD[key](name).
+  const SKILL_ADD = {};
+  function skillInput(key, placeholder) {
+    return '<div class="relative" data-skill-input="' + key + '"><div class="flex gap-2">' +
+      '<input type="text" autocomplete="off" data-skill-text class="' + C.input + '" placeholder="' + esc(placeholder || t('typeSkill')) + '" aria-label="' + esc(placeholder || t('typeSkill')) + '" role="combobox" aria-expanded="false" aria-autocomplete="list">' +
+      '<button type="button" data-action="skill-add" class="' + C.btnSecondary + ' shrink-0">' + t('add') + '</button></div>' +
+      '<ul data-skill-suggest role="listbox" class="hidden absolute z-20 start-0 end-0 mt-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden"></ul></div>';
+  }
+  function suggestSkills(q, exclude) {
+    q = q.trim().toLowerCase(); if (!q) return [];
+    const ex = (exclude || []).map(s => s.toLowerCase());
+    const pool = Array.from(new Set(SKILL_CATALOG.concat(db.jobs.flatMap(jobSkills))));
+    return pool.filter(s => s.toLowerCase().includes(q) && !ex.includes(s.toLowerCase()))
+      .sort((a, b) => (a.toLowerCase().startsWith(q) ? 0 : 1) - (b.toLowerCase().startsWith(q) ? 0 : 1) || a.localeCompare(b)).slice(0, 6);
+  }
+  function canonicalSkill(name) {
+    const n = name.trim(); const hit = SKILL_CATALOG.find(s => s.toLowerCase() === n.toLowerCase());
+    return hit || n;
+  }
+
+  /* ---------- chrome: header + bottom nav ---------- */
+  function navItems() {
+    const r = role();
+    if (r === 'company') return [
+      ['#/', 'home', 'navHome'], ['#/jobs', 'search', 'navSearch'], ['#/post', 'plus', 'navPost'], ['#/dashboard', 'dashboard', 'navDashboard'], ['#/profile', 'user', 'navAccount']];
+    return [
+      ['#/', 'home', 'navHome'], ['#/jobs', 'search', 'navSearch'], ['#/saved', 'bookmark', 'navSaved'], ['#/countries', 'globe', 'navExplore'],
+      r === 'seeker' ? ['#/profile', 'user', 'navProfile'] : ['#/auth', 'user', 'navSignIn']];
+  }
+  function activeNav() {
+    const p = route().parts[0] || '';
+    if (p === '' ) return '#/';
+    if (p === 'jobs' || p === 'job') return '#/jobs';
+    if (p === 'countries' || p === 'skills') return '#/countries';
+    if (p === 'dashboard' || p === 'applicant') return '#/dashboard';
+    if (p === 'register' || p === 'auth') return role() === 'guest' ? '#/auth' : '#/profile';
+    return '#/' + p;
+  }
+  function renderChrome() {
+    const act = activeNav();
+    const items = navItems();
+    const cc = filters.country;
+    const u = currentUser();
+    const p = myProfile(), co = myCompany();
+    const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    const searchForm = (id, extra) => '<form data-search-form class="' + extra + '" role="search"><label for="' + id + '" class="sr-only">' + t('searchPlaceholder') + '</label>' +
+      '<div class="relative w-full"><span class="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400">' + icon('search', 'w-4 h-4') + '</span>' +
+      '<input id="' + id + '" type="search" data-search-input value="' + esc(filters.q) + '" placeholder="' + esc(t('searchPlaceholder')) + '" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 ps-9 pe-3 py-2 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900"></div></form>';
+    $('#hdr').innerHTML =
+      '<div class="max-w-6xl mx-auto px-4 h-14 flex items-center gap-2 md:gap-4">' +
+        '<a href="#/" class="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg">' +
+          '<span data-testid="app-logo" data-logo="seeker" class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center">' + icon('seeker', 'w-5 h-5') + '</span><span class="text-base">Loker Dunia</span></a>' +
+        searchForm('hdr-q', 'hidden md:flex flex-1 max-w-md') +
+        '<nav class="hidden lg:flex items-center gap-1" aria-label="' + esc(t('mainNav')) + '">' + items.slice(0, 4).map(([h, , k]) =>
+          '<a href="' + h + '" class="px-3 py-2 rounded-lg text-sm font-medium ' + (act === h ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-950' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800') + '"' + (act === h ? ' aria-current="page"' : '') + '>' + t(k) + '</a>').join('') + '</nav>' +
+        '<div class="ms-auto flex items-center gap-1">' +
+          '<button type="button" data-action="quick-country" class="inline-flex items-center gap-1.5 h-10 px-2.5 rounded-xl text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="' + esc(t('quickCountry')) + '">' +
+            '<span class="text-lg" aria-hidden="true">' + flag(cc) + '</span><span class="hidden sm:inline max-w-28 truncate">' + esc(cc ? countryName(cc) : t('allCountries')) + '</span>' + icon('down', 'w-3.5 h-3.5') + '</button>' +
+          '<button type="button" data-action="pick-lang" data-testid="lang-switcher" data-lang="' + lang + '" class="inline-flex items-center gap-1 h-10 px-2.5 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="' + esc(t('switchLang') + ': ' + LANG_META[lang].name) + '" aria-haspopup="dialog">' +
+            icon('languages', 'w-4 h-4') + '<span>' + esc(LANG_META[lang].short) + '</span>' + icon('down', 'w-3.5 h-3.5') + '</button>' +
+          '<button type="button" data-action="toggle-theme" class="' + C.btnIcon + '" aria-label="' + esc(t(theme === 'dark' ? 'lightMode' : 'darkMode')) + '">' + icon(theme === 'dark' ? 'sun' : 'moon') + '</button>' +
+          (u ? '<a href="#/profile" class="hidden md:inline-flex items-center gap-2 h-10 ps-1 pe-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium">' +
+                avatar(p && p.photo, (p && p.fullName) || (co && co.name) || HR_USER || '?', 'w-8 h-8 text-xs') + '<span class="max-w-32 truncate">' + esc((p && p.fullName) || (co && co.name) || t('navProfile')) + '</span></a>'
+             : '<a href="#/auth" class="hidden md:inline-flex ' + C.btnPrimary + '">' + t('navSignIn') + '</a>') +
+        '</div></div>' +
+      searchForm('hdr-q-m', 'md:hidden px-4 pb-3 flex');
+    $('#bottomnav').innerHTML = '<ul class="grid grid-cols-5">' + items.map(([h, ic, k]) =>
+      '<li><a href="' + h + '" class="flex flex-col items-center gap-0.5 pt-2 pb-1.5 text-xs font-medium ' + (act === h ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400') + '"' + (act === h ? ' aria-current="page"' : '') + '>' + icon(ic, 'w-6 h-6') + '<span>' + t(k) + '</span></a></li>').join('') + '</ul>';
+    document.documentElement.lang = lang;
+    document.documentElement.dir = LANG_META[lang].dir;
+    $('#skip-link').textContent = t('skipToContent');
+  }
+
+  /* ==========================================================================
+     Views: browsing
+     ========================================================================== */
+  function route() {
+    const h = location.hash.replace(/^#/, '') || '/';
+    const [path, qs] = h.split('?');
+    return { parts: path.split('/').filter(Boolean), query: new URLSearchParams(qs || '') };
+  }
+  function go(h) { if (location.hash === h) render(); else location.hash = h; }
+
+  function jobCard(j, opts) {
+    opts = opts || {};
+    const co = companyOf(j);
+    const all = j.required.concat(j.nice);
+    const shown = all.slice(0, 4);
+    const p = myProfile();
+    const m = (opts.showMatch && p) ? matchJob(j, p.id) : null;
+    const saved = isSaved(j.id);
+    const conv = salaryConverted(j);
+    return '<article data-testid="job-card" class="relative ' + C.card + ' p-4 flex flex-col gap-3 hover:border-blue-400 dark:hover:border-blue-700">' +
+      '<div class="flex items-start gap-3">' + companyLogo(co.name) +
+        '<div class="min-w-0 flex-1"><h3 class="font-semibold leading-snug"><a href="#/job/' + j.id + '" class="after:absolute after:inset-0 after:rounded-2xl focus:outline-none focus-visible:underline" dir="auto">' + esc(j.title) + '</a></h3>' +
+        '<p class="text-sm ' + C.muted + ' truncate" dir="auto">' + esc(co.name) + '</p></div>' +
+        '<button type="button" data-action="bookmark" data-id="' + j.id + '" aria-pressed="' + saved + '" aria-label="' + esc(t(saved ? 'unsave' : 'save')) + '" class="relative z-10 ' + C.btnIcon + ' -me-2 -mt-1 ' + (saved ? 'text-blue-600 dark:text-blue-400' : '') + '">' +
+          '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="' + (saved ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS.bookmark + '</svg></button>' +
+      '</div>' +
+      '<div class="text-sm flex items-center gap-1.5"><span aria-hidden="true">' + flag(j.country) + '</span><span>' + esc(j.city) + ', ' + esc(countryName(j.country)) + '</span></div>' +
+      '<div><p class="text-sm font-semibold">' + esc(salaryText(j)) + '</p>' + (conv ? '<p class="text-xs ' + C.muted + '">' + esc(conv) + '</p>' : '') + '</div>' +
+      '<div class="flex flex-wrap gap-1.5"><span class="' + C.chip + '">' + t('type_' + j.type) + '</span><span class="' + C.chip + '">' + t('model_' + j.model) + '</span>' +
+        (j.remoteWorldwide ? '<span class="' + C.chipBlue + '">' + t('remoteWorldwide') + '</span>' : '') +
+        (j.visaSponsor ? '<span class="' + C.chipBlue + '">' + t('visaSponsor') + '</span>' : '') + '</div>' +
+      '<div class="flex flex-wrap gap-1.5" data-testid="job-skills">' + shown.map(s => '<span class="' + C.chip + ' border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-transparent">' + esc(s.name) + '</span>').join('') +
+        (all.length > shown.length ? '<span class="' + C.chip + ' bg-transparent dark:bg-transparent text-blue-700 dark:text-blue-300">' + t('nMore', { n: all.length - shown.length }) + '</span>' : '') + '</div>' +
+      '<div class="flex items-center justify-between gap-2 mt-auto pt-1"><span class="text-xs ' + C.muted + '">' + esc(relDays(j.postedAt)) + '</span>' + (m ? matchChip(m.pct) : '') + '</div>' +
+      '</article>';
+  }
+  function jobGrid(list, opts) { return '<div class="grid gap-3 sm:grid-cols-2' + ((opts || {}).three ? ' lg:grid-cols-3' : '') + '">' + list.map(j => jobCard(j, opts)).join('') + '</div>'; }
+
+  function sectionHead(title, linkHref, linkLabel) {
+    return '<div class="flex items-center justify-between gap-3 mb-3"><h2 class="' + C.h2 + '">' + esc(title) + '</h2>' + (linkHref ? '<a href="' + linkHref + '" class="' + C.btnGhost + '">' + esc(linkLabel) + icon('chevron', 'w-4 h-4') + '</a>' : '') + '</div>';
+  }
+
+  function viewHome() {
+    const r = role(); const p = myProfile(); const co = myCompany();
+    const countries = new Set(db.jobs.map(j => j.country)).size;
+    const latest = db.jobs.slice().sort((a, b) => b.postedAt.localeCompare(a.postedAt)).slice(0, 6);
+    let html = '<div class="space-y-8">';
+    const name = (p && p.fullName.split(' ')[0]) || (co && co.name) || HR_USER;
+    html += '<section><h1 class="' + C.h1 + '">' + esc(name ? t('hello', { name }) : t('homeTitle')) + '</h1>' +
+      '<p class="mt-1 ' + C.muted + '">' + t('homeStats', { jobs: db.jobs.length, countries }) + '</p>' +
+      '<div class="mt-4 -mx-4 px-4 flex gap-2 overflow-x-auto no-scrollbar" aria-label="' + esc(t('category')) + '">' +
+      CATEGORIES.map(c => '<button type="button" data-action="pick-category" data-cat="' + c + '" class="shrink-0 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-1.5 text-sm hover:border-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">' + t('cat_' + c) + '</button>').join('') + '</div></section>';
+
+    if (r === 'company' && co) {
+      const jobs = db.jobs.filter(j => j.companyId === co.id);
+      const apps = db.applications.filter(a => jobs.some(j => j.id === a.jobId));
+      html += '<section>' + sectionHead(t('yourHiring'), '#/dashboard', t('openDashboard')) +
+        '<div class="' + C.section + ' grid grid-cols-3 gap-3 text-center">' +
+        [[jobs.length, t('statJobs')], [apps.length, t('statApplicants')], [apps.filter(a => a.status === 'new').length, t('status_new')]].map(([n, l]) =>
+          '<div><p class="text-2xl font-bold text-blue-700 dark:text-blue-300">' + n + '</p><p class="text-xs ' + C.muted + '">' + esc(l) + '</p></div>').join('') + '</div></section>';
+    } else {
+      html += '<section>' + sectionHead(t('forYou'), p ? '#/jobs?match=1' : '', t('seeAll'));
+      if (p && skillsOf(p.id).length) {
+        const recs = db.jobs.map(j => ({ j, m: matchJob(j, p.id) })).filter(x => x.m.pct > 0).sort((a, b) => b.m.pct - a.m.pct).slice(0, 4).map(x => x.j);
+        html += recs.length ? '<div data-testid="for-you">' + jobGrid(recs, { showMatch: true }) + '</div>' : emptyState(t('noRecsTitle'), t('noRecsBody'), '<a href="#/register?step=3&edit=1" class="' + C.btnPrimary + '">' + t('addSkills') + '</a>');
+      } else {
+        html += '<div class="' + C.section + ' flex flex-col sm:flex-row sm:items-center gap-3"><div class="flex-1"><p class="font-medium">' + t('forYouGuestTitle') + '</p><p class="text-sm ' + C.muted + '">' + t('forYouGuestBody') + '</p></div>' +
+          '<a href="' + (r === 'seeker' ? '#/register' : '#/auth') + '" class="' + C.btnPrimary + '">' + t(r === 'seeker' ? 'completeProfile' : 'signUpSeeker') + '</a></div>';
+      }
+      html += '</section>';
+    }
+    html += '<section>' + sectionHead(t('latestJobs'), latest.length ? '#/jobs' : '', t('seeAll')) + (latest.length ? jobGrid(latest, { showMatch: r === 'seeker', three: true })
+      : emptyState(t('noJobsYet'), t('noJobsYetBody'), r === 'company' ? '<a href="#/post" class="' + C.btnPrimary + '">' + t('postJob') + '</a>' : '')) + '</section>';
+    html += '<section class="grid gap-3 sm:grid-cols-2">' +
+      '<a href="#/skills" class="' + C.section + ' flex items-center gap-3 hover:border-blue-400"><span class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300 flex items-center justify-center">' + icon('trending') + '</span><span class="flex-1"><span class="block font-medium">' + t('topSkills') + '</span><span class="block text-sm ' + C.muted + '">' + t('topSkillsSub') + '</span></span>' + icon('chevron', 'w-4 h-4 text-slate-400') + '</a>' +
+      '<a href="#/countries" class="' + C.section + ' flex items-center gap-3 hover:border-blue-400"><span class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300 flex items-center justify-center">' + icon('globe') + '</span><span class="flex-1"><span class="block font-medium">' + t('byCountry') + '</span><span class="block text-sm ' + C.muted + '">' + t('byCountrySub') + '</span></span>' + icon('chevron', 'w-4 h-4 text-slate-400') + '</a></section>';
+    return html + '</div>';
+  }
+
+  /* ---------- search ---------- */
+  function filterForm() {
+    const f = filters;
+    const cities = Array.from(new Set(db.jobs.filter(j => !f.country || j.country === f.country).map(j => j.city))).sort();
+    const check = (group, val, on, label) => '<label class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 dark:has-[:checked]:bg-blue-950 dark:has-[:checked]:text-blue-300 border-slate-200 dark:border-slate-700 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500">' +
+      '<input type="checkbox" class="sr-only" data-filter-multi="' + group + '" value="' + val + '"' + (on ? ' checked' : '') + '>' + esc(label) + '</label>';
+    const toggle = (key, label, hint) => '<label class="flex items-center justify-between gap-3 py-2"><span><span class="block text-sm font-medium">' + esc(label) + '</span>' + (hint ? '<span class="block text-xs ' + C.muted + '">' + esc(hint) + '</span>' : '') + '</span>' +
+      '<input type="checkbox" class="un-switch" data-filter-bool="' + key + '"' + (f[key] ? ' checked' : '') + '></label>';
+    const fc = filterCurrency();
+    return '<form data-filter-form class="space-y-5" onsubmit="return false">' +
+      '<div><span class="' + C.label + '">' + t('country') + '</span><button type="button" data-action="filter-country" class="' + C.input + ' flex items-center gap-2 text-start"><span aria-hidden="true">' + flag(f.country) + '</span><span class="flex-1 truncate">' + esc(f.country ? countryName(f.country) : t('allCountries')) + '</span>' + icon('down', 'w-4 h-4 text-slate-400') + '</button></div>' +
+      '<div><label class="' + C.label + '" for="f-city">' + t('city') + '</label><input id="f-city" list="f-city-list" data-filter="city" value="' + esc(f.city) + '" class="' + C.input + '" placeholder="' + esc(t('cityPlaceholder')) + '"><datalist id="f-city-list">' + cities.map(c => '<option value="' + esc(c) + '">').join('') + '</datalist></div>' +
+      '<div><label class="' + C.label + '" for="f-cat">' + t('category') + '</label><select id="f-cat" data-filter="category" class="' + C.input + '"><option value="">' + t('allCategories') + '</option>' + CATEGORIES.map(c => '<option value="' + c + '"' + (f.category === c ? ' selected' : '') + '>' + t('cat_' + c) + '</option>').join('') + '</select></div>' +
+      '<fieldset><legend class="' + C.label + '">' + t('jobType') + '</legend><div class="flex flex-wrap gap-2">' + JOB_TYPES.map(x => check('types', x, f.types.includes(x), t('type_' + x))).join('') + '</div></fieldset>' +
+      '<fieldset><legend class="' + C.label + '">' + t('workModel') + '</legend><div class="flex flex-wrap gap-2">' + WORK_MODELS.map(x => check('models', x, f.models.includes(x), t('model_' + x))).join('') + '</div></fieldset>' +
+      '<fieldset><legend class="' + C.label + '">' + t('salaryRange', { cur: fc }) + '</legend><div class="grid grid-cols-2 gap-2">' +
+        '<input type="number" min="0" inputmode="numeric" data-filter="salaryMin" value="' + esc(f.salaryMin) + '" class="' + C.input + '" placeholder="' + esc(t('min')) + '" aria-label="' + esc(t('min')) + '">' +
+        '<input type="number" min="0" inputmode="numeric" data-filter="salaryMax" value="' + esc(f.salaryMax) + '" class="' + C.input + '" placeholder="' + esc(t('max')) + '" aria-label="' + esc(t('max')) + '"></div>' +
+        '<p class="mt-1 text-xs ' + C.muted + '">' + t('salaryHint') + '</p></fieldset>' +
+      '<div><span class="' + C.label + '">' + t('skills') + '</span>' + skillInput('filter', t('filterSkillPh')) +
+        '<div class="mt-2 flex flex-wrap gap-1.5">' + f.skills.map(s => '<button type="button" data-action="filter-skill-remove" data-skill="' + esc(s) + '" class="' + C.chipBlue + '" aria-label="' + esc(t('remove') + ' ' + s) + '">' + esc(s) + icon('x', 'w-3 h-3') + '</button>').join('') + '</div></div>' +
+      '<div class="' + C.divider + '">' + toggle('rw', t('remoteWorldwide'), t('remoteWorldwideHint')) + toggle('visa', t('visaSponsor'), '') + toggle('relo', t('relocation'), '') + '</div>' +
+      '<div><label class="' + C.label + '" for="f-cur">' + t('showSalaryIn') + '</label><select id="f-cur" data-pref-cur class="' + C.input + '"><option value="local"' + (prefs.cur === 'local' ? ' selected' : '') + '>' + t('localCurrency') + '</option>' +
+        Object.keys(RATES).map(c => '<option value="' + c + '"' + (prefs.cur === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>' +
+        '<button type="button" data-action="show-rates" class="mt-1 ' + C.btnGhost + ' -ms-2 text-xs">' + icon('info', 'w-3.5 h-3.5') + t('ratesLink', { date: fmtDate(RATES_DATE) }) + '</button></div>' +
+      '<button type="button" data-action="reset-filters" class="' + C.btnSecondary + ' w-full">' + t('resetFilters') + '</button>' +
+      '</form>';
+  }
+  function viewJobs() {
+    const q = route().query;
+    if (q.get('match') === '1') ui.matchMode = true;
+    const p = myProfile();
+    const n = activeFilterCount();
+    return '<div><div class="flex items-end justify-between gap-3 mb-3"><div><h1 class="' + C.h1 + '">' + t('searchTitle') + '</h1><p class="text-sm ' + C.muted + '" data-result-count aria-live="polite"></p></div></div>' +
+      '<div class="flex flex-wrap items-center gap-2 mb-4">' +
+        '<button type="button" data-action="open-filters" class="lg:hidden ' + C.btnSecondary + '">' + icon('sliders', 'w-4 h-4') + t('filters') + (n ? ' <span class="rounded-full bg-blue-600 text-white text-xs px-1.5">' + n + '</span>' : '') + '</button>' +
+        '<button type="button" data-action="toggle-match" aria-pressed="' + ui.matchMode + '" class="' + (ui.matchMode ? C.btnPrimary : C.btnSecondary) + '">' + icon('sparkle', 'w-4 h-4') + t('matchMySkills') + '</button>' +
+        '<label class="sr-only" for="sort">' + t('sortBy') + '</label><select id="sort" data-action-change="sort" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm"' + (ui.matchMode ? ' disabled' : '') + '>' +
+          '<option value="newest"' + (ui.sort === 'newest' ? ' selected' : '') + '>' + t('sortNewest') + '</option><option value="salary"' + (ui.sort === 'salary' ? ' selected' : '') + '>' + t('sortSalary') + '</option></select>' +
+      '</div>' +
+      (ui.matchMode && !(p && skillsOf(p.id).length) ? '<div class="mb-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950 p-3 text-sm flex flex-col sm:flex-row sm:items-center gap-2"><span class="flex-1">' + t('matchNeedsProfile') + '</span><a class="' + C.btnPrimary + '" href="' + (role() === 'seeker' ? '#/register' : '#/auth') + '">' + t(role() === 'seeker' ? 'completeProfile' : 'signUpSeeker') + '</a></div>' : '') +
+      (ui.matchMode && p ? '<p class="mb-4 text-xs ' + C.muted + '">' + t('matchExplain') + '</p>' : '') +
+      '<div class="lg:grid lg:grid-cols-4 lg:gap-6"><aside class="hidden lg:block lg:col-span-1"><div class="' + C.section + ' sticky top-20" data-filter-host>' + filterForm() + '</div></aside>' +
+      '<div class="lg:col-span-3"><div data-active-chips class="flex flex-wrap gap-1.5 mb-3"></div><div id="results"></div></div></div></div>';
+  }
+  function activeChips() {
+    const f = filters, out = [];
+    if (f.q) out.push(['q', '', '"' + f.q + '"']);
+    if (f.country) out.push(['country', '', flag(f.country) + ' ' + countryName(f.country)]);
+    if (f.city) out.push(['city', '', f.city]);
+    if (f.category) out.push(['category', '', t('cat_' + f.category)]);
+    f.types.forEach(x => out.push(['types', x, t('type_' + x)]));
+    f.models.forEach(x => out.push(['models', x, t('model_' + x)]));
+    f.skills.forEach(x => out.push(['skills', x, x]));
+    if (f.salaryMin) out.push(['salaryMin', '', '≥ ' + fmtMoney(Number(f.salaryMin), filterCurrency(), true)]);
+    if (f.salaryMax) out.push(['salaryMax', '', '≤ ' + fmtMoney(Number(f.salaryMax), filterCurrency(), true)]);
+    if (f.rw) out.push(['rw', '', t('remoteWorldwide')]);
+    if (f.visa) out.push(['visa', '', t('visaSponsor')]);
+    if (f.relo) out.push(['relo', '', t('relocation')]);
+    return out.map(([k, v, l]) => '<button type="button" data-action="clear-filter" data-key="' + k + '" data-val="' + esc(v) + '" class="' + C.chipBlue + '" aria-label="' + esc(t('remove') + ' ' + l) + '">' + esc(l) + icon('x', 'w-3 h-3') + '</button>').join('');
+  }
+  let searchSeq = 0;
+  async function refreshResults() {
+    const box = $('#results'); if (!box) return;
+    const chips = $('[data-active-chips]'); if (chips) chips.innerHTML = activeChips();
+    const seq = ++searchSeq;
+    box.innerHTML = skeletonCards(4);
+    const list = await api.searchJobs(filters);
+    if (seq !== searchSeq || !$('#results')) return;
+    const sorted = sortJobs(list);
+    $('[data-result-count]').textContent = t('nFound', { n: sorted.length });
+    $('#results').innerHTML = sorted.length ? jobGrid(sorted, { showMatch: ui.matchMode || role() === 'seeker' })
+      : emptyState(t('noJobs'), t('noJobsBody'), '<button type="button" data-action="reset-filters" class="' + C.btnPrimary + '">' + t('resetFilters') + '</button>');
+  }
+  function refreshFilterHosts() {
+    $$('[data-filter-host]').forEach(h => { h.innerHTML = filterForm(); });
+    const btn = $('[data-action="open-filters"]');
+    if (btn) { const n = activeFilterCount(); btn.innerHTML = icon('sliders', 'w-4 h-4') + t('filters') + (n ? ' <span class="rounded-full bg-blue-600 text-white text-xs px-1.5">' + n + '</span>' : ''); }
+  }
+
+  /* ---------- job detail ---------- */
+  function levelLabel(lv) { return t('level_' + lv); }
+  function viewJobSkeleton() { return '<div class="space-y-4 animate-pulse motion-reduce:animate-none" aria-busy="true"><div class="h-8 w-2/3 rounded bg-slate-200 dark:bg-slate-800"></div><div class="h-4 w-1/3 rounded bg-slate-200 dark:bg-slate-800"></div><div class="h-40 rounded-2xl bg-slate-200 dark:bg-slate-800"></div><div class="h-64 rounded-2xl bg-slate-200 dark:bg-slate-800"></div></div>'; }
+  function matchPanel(job, pid, compact) {
+    const m = matchJob(job, pid);
+    return '<div data-testid="match-panel" class="space-y-3"><div class="flex items-center justify-between gap-2"><span class="text-sm font-medium">' + t(compact ? 'matchScore' : 'yourMatch') + '</span>' + matchChip(m.pct) + '</div>' + matchBar(m.pct) +
+      (m.matched.length ? '<div><p class="text-xs font-medium ' + C.muted + ' mb-1">' + t('matchedSkills') + '</p><div class="flex flex-wrap gap-1.5">' + m.matched.map(s => '<span class="' + C.chip + '">' + icon('check', 'w-3 h-3 text-emerald-600') + esc(s.name) + (s.proof === 'certified' ? ' ✓' : '') + '</span>').join('') + '</div></div>' : '') +
+      (m.missing.length ? '<div><p class="text-xs font-medium ' + C.muted + ' mb-1">' + t('missingSkills') + '</p><div class="flex flex-wrap gap-1.5" data-testid="missing-skills">' + m.missing.map(s => '<span class="' + C.chip + ' border border-dashed border-slate-300 dark:border-slate-600 bg-transparent dark:bg-transparent">' + esc(s.name) + ' · ' + esc(s.have ? t('needLevel', { lv: levelLabel(s.level) }) : levelLabel(s.level)) + '</span>').join('') + '</div></div>' : '') +
+      (compact ? '' : '<p class="text-xs ' + C.muted + '">' + t('matchExplain') + '</p>') + '</div>';
+  }
+  function visaText(j) {
+    if (j.remoteWorldwide) return t('visaRemoteWorldwide');
+    const parts = [j.visaSponsor ? t('visaYes', { country: countryName(j.country) }) : t('visaNo', { country: countryName(j.country) })];
+    if (j.relocation) parts.push(t('reloYes'));
+    if (j.visaNote) parts.push(j.visaNote);
+    return parts.join(' ');
+  }
+  function applyState(j) {
+    const p = myProfile();
+    if (role() === 'company') return '';
+    const applied = p && db.applications.find(a => a.jobId === j.id && a.profileId === p.id);
+    if (applied) return '<button type="button" disabled class="' + C.btnSecondary + ' w-full">' + icon('check', 'w-4 h-4') + t('alreadyApplied', { status: t('status_' + applied.status) }) + '</button>';
+    return '<button type="button" data-action="apply" data-id="' + j.id + '" class="' + C.btnPrimary + ' w-full">' + t('applyNow') + '</button>';
+  }
+  function viewJob(j) {
+    if (!j) return emptyState(t('jobNotFound'), t('jobNotFoundBody'), '<a href="#/jobs" class="' + C.btnPrimary + '">' + t('searchTitle') + '</a>');
+    const co = companyOf(j); const p = myProfile();
+    const saved = isSaved(j.id);
+    const mine = {}; if (p) skillsOf(p.id).forEach(s => { mine[s.name.toLowerCase()] = s; });
+    const skillRow = s => {
+      const u = mine[s.name.toLowerCase()];
+      const ok = u && u.level >= s.level;
+      return '<li class="flex items-center justify-between gap-3 py-2"><span class="flex items-center gap-2 text-sm">' + (p ? (ok ? icon('check', 'w-4 h-4 text-emerald-600') : '<span class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-600"></span>') : '') + esc(s.name) + '</span><span class="' + LEVEL_CHIP[s.level] + '">' + levelLabel(s.level) + '</span></li>';
+    };
+    const isOwner = role() === 'company' && myCompany() && myCompany().id === j.companyId;
+    const nApps = db.applications.filter(a => a.jobId === j.id).length;
+    const conv = salaryConverted(j);
+    const list = items => '<ul class="list-disc ps-5 space-y-1 text-sm">' + items.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+    const info = (label, value) => '<div class="py-2.5 flex flex-col sm:flex-row sm:gap-4"><dt class="text-sm ' + C.muted + ' sm:w-44 shrink-0">' + esc(label) + '</dt><dd class="text-sm">' + value + '</dd></div>';
+    const aside = '<div class="' + C.section + ' space-y-4">' +
+      '<div><p class="text-xs ' + C.muted + '">' + t('salary') + '</p><p class="text-lg font-bold">' + esc(salaryText(j)) + '</p>' + (conv ? '<p class="text-sm ' + C.muted + '">' + esc(conv) + '</p>' : '') + '</div>' +
+      (isOwner ? '<a href="#/dashboard/' + j.id + '" class="' + C.btnPrimary + ' w-full">' + icon('users', 'w-4 h-4') + t('viewApplicants', { n: nApps }) + '</a>' : applyState(j)) +
+      '<button type="button" data-action="bookmark" data-id="' + j.id + '" aria-pressed="' + saved + '" class="' + C.btnSecondary + ' w-full">' +
+        '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="' + (saved ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS.bookmark + '</svg>' + t(saved ? 'saved' : 'save') + '</button>' +
+      (role() !== 'company' ? (p ? '<div class="pt-4 border-t border-slate-200 dark:border-slate-800">' + matchPanel(j, p.id) + '</div>'
+        : '<div class="pt-4 border-t border-slate-200 dark:border-slate-800 text-sm"><p class="' + C.muted + '">' + t('matchSignIn') + '</p><a href="' + (role() === 'seeker' ? '#/register' : '#/auth') + '" class="mt-2 ' + C.btnGhost + ' -ms-2">' + t(role() === 'seeker' ? 'completeProfile' : 'signUpSeeker') + '</a></div>') : '') +
+      '</div>';
+    return backLink('#/jobs', t('backToSearch')) +
+      '<div class="lg:grid lg:grid-cols-3 lg:gap-6"><div class="lg:col-span-2 space-y-4">' +
+      '<header class="flex items-start gap-3">' + companyLogo(co.name) + '<div class="min-w-0"><h1 class="' + C.h1 + '" dir="auto">' + esc(j.title) + '</h1>' +
+        '<p class="' + C.muted + '" dir="auto">' + esc(co.name) + '</p><p class="mt-1 text-sm flex items-center gap-1.5"><span aria-hidden="true">' + flag(j.country) + '</span>' + esc(j.city) + ', ' + esc(countryName(j.country)) + ' · ' + esc(relDays(j.postedAt)) + '</p>' +
+        '<div class="mt-2 flex flex-wrap gap-1.5"><span class="' + C.chip + '">' + t('cat_' + j.category) + '</span><span class="' + C.chip + '">' + t('type_' + j.type) + '</span><span class="' + C.chip + '">' + t('model_' + j.model) + '</span>' +
+        (j.remoteWorldwide ? '<span class="' + C.chipBlue + '">' + t('remoteWorldwide') + '</span>' : '') + (j.visaSponsor ? '<span class="' + C.chipBlue + '">' + t('visaSponsor') + '</span>' : '') + (j.relocation ? '<span class="' + C.chipBlue + '">' + t('relocation') + '</span>' : '') + '</div></div></header>' +
+      '<div class="lg:hidden">' + aside + '</div>' +
+      '<section class="' + C.section + '"><h2 class="font-semibold mb-2">' + t('description') + '</h2><p class="text-sm leading-relaxed" dir="auto">' + esc(j.description) + '</p></section>' +
+      (j.qualifications.length ? '<section class="' + C.section + '"><h2 class="font-semibold mb-2">' + t('qualifications') + '</h2>' + list(j.qualifications) + '</section>' : '') +
+      (j.benefits.length ? '<section class="' + C.section + '"><h2 class="font-semibold mb-2">' + t('benefits') + '</h2>' + list(j.benefits) + '</section>' : '') +
+      '<section class="' + C.section + '" data-testid="job-skill-lists"><h2 class="font-semibold mb-1">' + t('skills') + '</h2><div class="grid gap-4 sm:grid-cols-2">' +
+        '<div><h3 class="text-sm font-medium mt-2">' + t('required') + '</h3><ul class="' + C.divider + '">' + j.required.map(skillRow).join('') + '</ul></div>' +
+        '<div><h3 class="text-sm font-medium mt-2">' + t('nicePlus') + '</h3><ul class="' + C.divider + '">' + (j.nice.length ? j.nice.map(skillRow).join('') : '<li class="py-2 text-sm ' + C.muted + '">-</li>') + '</ul></div></div></section>' +
+      '<section class="' + C.section + '"><h2 class="font-semibold mb-1">' + t('requirements') + '</h2><dl class="' + C.divider + '">' +
+        info(t('minExp'), esc(j.minExp ? t('nYears', { n: j.minExp }) : t('noExpNeeded'))) +
+        info(t('education'), esc(j.education === 'any' ? t('edu_any') : t('eduMin', { lv: t('edu_' + j.education) }))) +
+        info(t('languages'), esc(j.languages.map(l => langName(l.code) + ' (' + t('lang_' + l.level) + ')').join(', '))) +
+        info(t('visaInfo'), esc(visaText(j))) +
+        info(t('timezone'), esc(j.timezone + (j.remoteWorldwide ? ' · ' + t('tzFlexible') : ''))) + '</dl></section>' +
+      '</div><div class="hidden lg:block lg:col-span-1"><div class="sticky top-20">' + aside + '</div></div></div>';
+  }
+
+  function viewSaved() {
+    const ids = db.savedJobIds;
+    const jobs = ids.map(getJob).filter(Boolean);
+    return '<h1 class="' + C.h1 + ' mb-1">' + t('savedTitle') + '</h1><p class="text-sm ' + C.muted + ' mb-4">' + t('nSaved', { n: jobs.length }) + '</p>' +
+      (jobs.length ? jobGrid(jobs, { showMatch: role() === 'seeker', three: true }) : emptyState(t('noSaved'), t('noSavedBody'), '<a href="#/jobs" class="' + C.btnPrimary + '">' + t('findJobs') + '</a>'));
+  }
+
+  function insightsTabs(active) {
+    const tab = (h, k) => '<a href="' + h + '" class="flex-1 text-center rounded-lg px-3 py-2 text-sm font-medium ' + (active === h ? 'bg-white dark:bg-slate-900 shadow-sm text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-300') + '"' + (active === h ? ' aria-current="page"' : '') + '>' + t(k) + '</a>';
+    return '<div class="flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 mb-4 max-w-md">' + tab('#/countries', 'byCountry') + tab('#/skills', 'topSkills') + '</div>';
+  }
+  const insight = { country: '', category: '' };
+  function viewSkills() {
+    const jobs = db.jobs.filter(j => (!insight.country || j.country === insight.country) && (!insight.category || j.category === insight.category));
+    const agg = {};
+    jobs.forEach(j => {
+      j.required.forEach(s => { const a = agg[s.name] = agg[s.name] || { n: 0, req: 0 }; a.n++; a.req++; });
+      j.nice.forEach(s => { const a = agg[s.name] = agg[s.name] || { n: 0, req: 0 }; a.n++; });
+    });
+    const rows = Object.entries(agg).sort((a, b) => b[1].n - a[1].n || b[1].req - a[1].req || a[0].localeCompare(b[0])).slice(0, 25);
+    const top = rows.length ? rows[0][1].n : 1;
+    const p = myProfile(); const mine = new Set(p ? skillsOf(p.id).map(s => s.name.toLowerCase()) : []);
+    const countries = Array.from(new Set(db.jobs.map(j => j.country))).sort((a, b) => countryName(a).localeCompare(countryName(b)));
+    return '<h1 class="' + C.h1 + ' mb-3">' + t('topSkills') + '</h1>' + insightsTabs('#/skills') +
+      '<div class="grid grid-cols-2 gap-2 max-w-md mb-4">' +
+        '<div><label class="' + C.label + '" for="ins-c">' + t('country') + '</label><select id="ins-c" data-insight="country" class="' + C.input + '"><option value="">' + t('allCountries') + '</option>' + countries.map(c => '<option value="' + c + '"' + (insight.country === c ? ' selected' : '') + '>' + flag(c) + ' ' + esc(countryName(c)) + '</option>').join('') + '</select></div>' +
+        '<div><label class="' + C.label + '" for="ins-k">' + t('category') + '</label><select id="ins-k" data-insight="category" class="' + C.input + '"><option value="">' + t('allCategories') + '</option>' + CATEGORIES.map(c => '<option value="' + c + '"' + (insight.category === c ? ' selected' : '') + '>' + t('cat_' + c) + '</option>').join('') + '</select></div></div>' +
+      '<p class="text-sm ' + C.muted + ' mb-3">' + t('skillsBasis', { n: jobs.length }) + '</p>' +
+      (rows.length ? '<ol class="' + C.card + ' ' + C.divider + '" data-testid="skill-ranking">' + rows.map(([name, a], i) =>
+        '<li><button type="button" data-action="search-skill" data-skill="' + esc(name) + '" class="w-full text-start px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500">' +
+        '<span class="w-6 text-sm font-semibold ' + (i < 3 ? 'text-blue-700 dark:text-blue-300' : C.muted) + '">' + (i + 1) + '</span>' +
+        '<span class="flex-1 min-w-0"><span class="flex items-center gap-2"><span class="font-medium truncate">' + esc(name) + '</span>' + (mine.has(name.toLowerCase()) ? '<span class="' + C.chipBlue + ' py-0.5">' + t('youHaveIt') + '</span>' : '') + '</span>' +
+        '<span class="mt-1.5 block h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden"><span class="block h-full rounded-full bg-blue-600" style="width:' + Math.round(a.n / top * 100) + '%"></span></span></span>' +
+        '<span class="text-end shrink-0"><span class="block text-sm font-semibold">' + t('nJobs', { n: a.n }) + '</span><span class="block text-xs ' + C.muted + '">' + t('pctRequired', { n: Math.round(a.req / a.n * 100) }) + '</span></span></button></li>').join('') + '</ol>'
+        : emptyState(t('noJobs'), t('noJobsBody')));
+  }
+  let countryQuery = '';
+  function viewCountries() {
+    const counts = {};
+    db.jobs.forEach(j => { counts[j.country] = (counts[j.country] || 0) + 1; });
+    const rwCount = db.jobs.filter(j => j.remoteWorldwide).length;
+    const list = Object.keys(counts).filter(c => !countryQuery || countryName(c).toLowerCase().includes(countryQuery.toLowerCase())).sort((a, b) => counts[b] - counts[a] || countryName(a).localeCompare(countryName(b)));
+    return '<h1 class="' + C.h1 + ' mb-3">' + t('byCountry') + '</h1>' + insightsTabs('#/countries') +
+      '<input type="search" data-country-query value="' + esc(countryQuery) + '" class="' + C.input + ' max-w-md mb-4" placeholder="' + esc(t('searchCountry')) + '" aria-label="' + esc(t('searchCountry')) + '">' +
+      '<div data-country-grid>' + countryGrid(list, counts, rwCount) + '</div>' +
+      '<p class="mt-4 text-sm ' + C.muted + '">' + t('otherCountriesHint') + ' <button type="button" data-action="quick-country" class="' + C.btnGhost + ' -ms-1">' + t('allCountriesList') + '</button></p>';
+  }
+  function countryGrid(list, counts, rwCount) {
+    const tile = (onclick, flagStr, name, n) => '<button type="button" ' + onclick + ' class="' + C.card + ' p-4 flex items-center gap-3 text-start hover:border-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"><span class="text-3xl" aria-hidden="true">' + flagStr + '</span><span class="min-w-0"><span class="block font-medium truncate">' + esc(name) + '</span><span class="block text-sm ' + C.muted + '">' + t('nJobs', { n }) + '</span></span></button>';
+    return '<div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" data-testid="country-grid">' +
+      (!countryQuery ? tile('data-action="browse-rw"', '🌐', t('remoteWorldwide'), rwCount) : '') +
+      list.map(c => tile('data-action="browse-country" data-cc="' + c + '"', flag(c), countryName(c), counts[c])).join('') + '</div>' +
+      (!list.length ? emptyState(t('noCountry'), t('noCountryBody')) : '');
+  }
+
+  /* ==========================================================================
+     Views: accounts and job-seeker profile
+     ========================================================================== */
+  // Identity comes from the Homeroom account the app is opened with, so
+  // "Daftar/Masuk" is choosing a role and profile, never a password.
+  let authTab = 'register';
+  function viewAuth() {
+    const tabQ = route().query.get('tab');
+    if (tabQ === 'login' || tabQ === 'register') authTab = tabQ;
+    // Accounts are the Homeroom user's own seeker profile and the companies
+    // they own; demo companies exist only in staging previews.
+    const own = me ? db.companies.filter(c => me.ownedCompanyIds.includes(c.id)) : [];
+    const mine = (me && me.profileId ? [{ kind: 'seeker', id: me.profileId }] : []).concat(own.map(c => ({ kind: 'company', id: c.id })));
+    const demos = me ? db.companies.filter(c => me.demoCompanyIds.includes(c.id)).map(c => ({ kind: 'company', id: c.id, demo: true })) : [];
+    const acctRow = u => {
+      const p = u.kind === 'seeker' && getProfile(u.id); const co = u.kind === 'company' && db.companies.find(c => c.id === u.id);
+      const name = (p && p.fullName) || (co && co.name) || t('unfinishedProfile');
+      return '<li><button type="button" data-action="sign-in" data-kind="' + u.kind + '" data-id="' + esc(u.id) + '" class=""w-full flex items-center gap-3 px-4 py-3 text-start hover:bg-slate-50 dark:hover:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500">' +
+        avatar(p && p.photo, name, 'w-10 h-10 text-sm') + '<span class="flex-1 min-w-0"><span class="block font-medium truncate">' + esc(name) + '</span><span class="block text-xs ' + C.muted + '">' + t(u.kind === 'seeker' ? 'roleSeeker' : 'roleCompany') + (u.demo ? ' · ' + t('sampleAccount') : '') + '</span></span>' + icon('chevron', 'w-4 h-4 text-slate-400') + '</button></li>';
+    };
+    const tab = (k, label) => '<button type="button" role="tab" aria-selected="' + (authTab === k) + '" data-action="auth-tab" data-tab="' + k + '" class="flex-1 rounded-lg px-3 py-2 text-sm font-medium ' + (authTab === k ? 'bg-white dark:bg-slate-900 shadow-sm text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-300') + '">' + label + '</button>';
+    const roleCard = (r, ic, title, body) => '<button type="button" data-action="choose-role" data-role="' + r + '" class="' + C.card + ' p-4 flex items-start gap-3 text-start hover:border-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">' +
+      '<span class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300 flex items-center justify-center shrink-0">' + icon(ic) + '</span><span><span class="block font-semibold">' + title + '</span><span class="block text-sm ' + C.muted + '">' + body + '</span></span></button>';
+    return '<div class="max-w-lg mx-auto"><h1 class="' + C.h1 + '">' + t(authTab === 'register' ? 'signUpTitle' : 'signInTitle') + '</h1>' +
+      '<p class="mt-1 text-sm ' + C.muted + '">' + (HR_USER ? t('homeroomIdentity', { user: HR_USER }) : t('homeroomIdentityAnon')) + '</p>' +
+      '<div role="tablist" class="mt-4 flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">' + tab('register', t('signUp')) + tab('login', t('signIn')) + '</div>' +
+      (authTab === 'register'
+        ? '<div class="mt-4 grid gap-3" data-testid="role-choice">' + roleCard('seeker', 'user', t('roleSeeker'), t('roleSeekerBody')) + roleCard('company', 'briefcase', t('roleCompany'), t('roleCompanyBody')) + '</div>'
+        : '<div class="mt-4 space-y-4">' +
+          (mine.length ? '<div><h2 class="text-sm font-medium ' + C.muted + ' mb-2">' + t('yourAccounts') + '</h2><ul class="' + C.card + ' ' + C.divider + ' overflow-hidden">' + mine.map(acctRow).join('') + '</ul></div>'
+            : '<p class="text-sm ' + C.muted + '">' + t('noAccountsYet') + '</p>') +
+          (demos.length ? '<div><h2 class="text-sm font-medium ' + C.muted + ' mb-2">' + t('sampleAccounts') + '</h2><ul class="' + C.card + ' ' + C.divider + ' overflow-hidden">' + demos.map(acctRow).join('') + '</ul></div>' : '') + '</div>') +
+      '</div>';
+  }
+  function viewCompanySignup() {
+    const d = companyDraft;
+    const err = k => d.errors[k] ? '<p class="' + C.err + '" data-err>' + esc(d.errors[k]) + '</p>' : '';
+    const inp = k => d.errors[k] ? C.inputErr : C.input;
+    return '<div class="max-w-lg mx-auto">' + backLink('#/auth', t('back')) + '<h1 class="' + C.h1 + '">' + t('companySignupTitle') + '</h1>' +
+      '<p class="mt-1 text-sm ' + C.muted + '">' + t('companySignupBody') + '</p>' +
+      '<form data-form="company-signup" class="mt-4 ' + C.section + ' space-y-4" novalidate>' +
+        '<div><label class="' + C.label + '" for="cs-name">' + t('companyName') + '</label><input id="cs-name" data-cd="name" value="' + esc(d.name) + '" class="' + inp('name') + '">' + err('name') + '</div>' +
+        '<div><span class="' + C.label + '">' + t('country') + '</span><button type="button" data-action="cd-country" class="' + inp('country') + ' flex items-center gap-2 text-start"><span aria-hidden="true">' + flag(d.country) + '</span><span class="flex-1">' + esc(d.country ? countryName(d.country) : t('chooseCountry')) + '</span>' + icon('down', 'w-4 h-4 text-slate-400') + '</button>' + err('country') + '</div>' +
+        '<div><label class="' + C.label + '" for="cs-city">' + t('city') + '</label><input id="cs-city" data-cd="city" value="' + esc(d.city) + '" class="' + inp('city') + '">' + err('city') + '</div>' +
+        '<div><label class="' + C.label + '" for="cs-ind">' + t('industry') + '</label><select id="cs-ind" data-cd="industry" class="' + C.input + '">' + CATEGORIES.map(c => '<option value="' + c + '"' + (d.industry === c ? ' selected' : '') + '>' + t('cat_' + c) + '</option>').join('') + '</select></div>' +
+        '<button type="submit" class="' + C.btnPrimary + ' w-full">' + t('createCompany') + '</button></form></div>';
+  }
+  let companyDraft = { name: '', country: '', city: '', industry: 'it', errors: {} };
+
+  /* ---------- 4-step registration ---------- */
+  let draft = null;
+  function blankDraft() {
+    return { step: 1, mode: 'create', profileId: null,
+      bio: { photo: '', fullName: '', birthDate: '', gender: '', country: '', city: '', nationality: '', email: '', phoneCode: '', phone: '', summary: '' },
+      education: [], experience: [], skills: [], languages: [], certificates: [],
+      certForm: blankCert(), errors: {} };
+  }
+  function blankCert() { return { name: '', issuer: '', issueDate: '', expiryDate: '', verify: '', skills: [], file: null }; }
+  function draftFromProfile(p) {
+    return { step: 1, mode: 'edit', profileId: p.id,
+      bio: { photo: p.photo || '', fullName: p.fullName, birthDate: p.birthDate, gender: p.gender, country: p.country, city: p.city, nationality: p.nationality, email: p.email, phoneCode: p.phoneCode, phone: p.phone, summary: p.summary },
+      education: JSON.parse(JSON.stringify(p.education || [])), experience: JSON.parse(JSON.stringify(p.experience || [])),
+      skills: skillsOf(p.id).map(s => ({ ...s })), languages: JSON.parse(JSON.stringify(p.languages || [])),
+      certificates: certsOf(p.id).map(c => JSON.parse(JSON.stringify(c))), certForm: blankCert(), errors: {} };
+  }
+  function setPath(obj, path, val) {
+    const ks = path.split('.'); let o = obj;
+    for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]];
+    o[ks[ks.length - 1]] = val;
+  }
+  function getPath(obj, path) { return path.split('.').reduce((o, k) => (o == null ? o : o[k]), obj); }
+
+  const STEP_KEYS = ['stepBio', 'stepEduExp', 'stepSkills', 'stepCerts'];
+  function field(path, label, opts) {
+    opts = opts || {};
+    const v = getPath(draft, path) ?? '';
+    const e = draft.errors[path];
+    const id = 'd-' + path.replace(/\./g, '-');
+    const cls = e ? C.inputErr : C.input;
+    let control;
+    if (opts.type === 'textarea') control = '<textarea id="' + id + '" data-draft="' + path + '" rows="' + (opts.rows || 4) + '" class="' + cls + '"' + (opts.max ? ' maxlength="' + opts.max + '"' : '') + ' placeholder="' + esc(opts.ph || '') + '">' + esc(v) + '</textarea>';
+    else if (opts.type === 'select') control = '<select id="' + id + '" data-draft="' + path + '" class="' + cls + '">' + (opts.blank ? '<option value="">' + esc(opts.blank) + '</option>' : '') + opts.options.map(([val, l]) => '<option value="' + esc(val) + '"' + (String(v) === String(val) ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select>';
+    else control = '<input id="' + id + '" type="' + (opts.type || 'text') + '" data-draft="' + path + '" value="' + esc(v) + '" class="' + cls + '"' + (opts.attrs || '') + ' placeholder="' + esc(opts.ph || '') + '">';
+    return '<div class="' + (opts.wrap || '') + '"><label class="' + C.label + '" for="' + id + '">' + esc(label) + (opts.optional ? ' <span class="font-normal ' + C.muted + '">(' + t('optional') + ')</span>' : '') + '</label>' + control +
+      (e ? '<p class="' + C.err + '" data-err>' + esc(e) + '</p>' : '') + (opts.hint ? '<p class="mt-1 text-xs ' + C.muted + '">' + esc(opts.hint) + '</p>' : '') + '</div>';
+  }
+  function countryField(path, label) {
+    const v = getPath(draft, path); const e = draft.errors[path];
+    return '<div><span class="' + C.label + '">' + esc(label) + '</span><button type="button" data-action="draft-country" data-path="' + path + '" class="' + (e ? C.inputErr : C.input) + ' flex items-center gap-2 text-start"><span aria-hidden="true">' + flag(v) + '</span><span class="flex-1 truncate">' + esc(v ? countryName(v) : t('chooseCountry')) + '</span>' + icon('down', 'w-4 h-4 text-slate-400') + '</button>' + (e ? '<p class="' + C.err + '" data-err>' + esc(e) + '</p>' : '') + '</div>';
+  }
+  function stepBio() {
+    const b = draft.bio;
+    const codes = sortedCountries().map(c => [c, flag(c) + ' +' + DIAL[c] + ' ' + countryName(c)]);
+    return '<div class="space-y-4">' +
+      '<div class="flex items-center gap-4">' + avatar(b.photo, b.fullName || '?', 'w-20 h-20 text-xl') +
+        '<div><label class="' + C.btnSecondary + ' cursor-pointer focus-within:ring-2 focus-within:ring-blue-500">' + icon('upload', 'w-4 h-4') + t(b.photo ? 'changePhoto' : 'uploadPhoto') + '<input type="file" accept="image/jpeg,image/png,image/webp" data-file="photo" class="sr-only"></label>' +
+        '<p class="mt-1 text-xs ' + C.muted + '">' + t(draft.uploading === 'photo' ? 'uploading' : 'photoHint') + '</p>' + (draft.errors['bio.photo'] ? '<p class="' + C.err + '" data-err>' + esc(draft.errors['bio.photo']) + '</p>' : '') + '</div></div>' +
+      field('bio.fullName', t('fullName'), { attrs: ' autocomplete="name"' }) +
+      '<div class="grid gap-4 sm:grid-cols-2">' + field('bio.birthDate', t('birthDate'), { type: 'date', attrs: ' max="' + today() + '"' }) +
+        field('bio.gender', t('gender'), { type: 'select', blank: t('choose'), options: [['male', t('gender_male')], ['female', t('gender_female')], ['other', t('gender_other')], ['na', t('gender_na')]] }) + '</div>' +
+      '<div class="grid gap-4 sm:grid-cols-2">' + countryField('bio.country', t('countryOfResidence')) + field('bio.city', t('cityOfResidence')) + '</div>' +
+      countryField('bio.nationality', t('nationality')) +
+      field('bio.email', t('email'), { type: 'email', attrs: ' autocomplete="email" inputmode="email"' }) +
+      '<div><span class="' + C.label + '">' + t('phone') + '</span><div class="grid grid-cols-5 gap-2">' +
+        '<div class="col-span-2">' + field('bio.phoneCode', t('countryCode'), { type: 'select', blank: t('code'), options: codes }).replace('class="' + C.label + '"', 'class="sr-only"') + '</div>' +
+        '<div class="col-span-3">' + field('bio.phone', t('phoneNumber'), { type: 'tel', attrs: ' inputmode="tel" autocomplete="tel-national"', ph: '81234567890' }).replace('class="' + C.label + '"', 'class="sr-only"') + '</div></div></div>' +
+      field('bio.summary', t('summary'), { type: 'textarea', max: 600, ph: t('summaryPh'), hint: t('summaryHint') }) +
+      '</div>';
+  }
+  function stepEduExp() {
+    const edu = draft.education.map((e, i) => '<div class="rounded-xl border border-slate-200 dark:border-slate-800 p-3 space-y-3" data-entry>' +
+      '<div class="flex items-center justify-between"><span class="text-sm font-medium">' + t('educationN', { n: i + 1 }) + '</span><button type="button" data-action="remove-entry" data-list="education" data-i="' + i + '" class="' + C.btnGhost + ' text-red-600 dark:text-red-400">' + icon('trash', 'w-4 h-4') + t('remove') + '</button></div>' +
+      '<div class="grid gap-3 sm:grid-cols-2">' + field('education.' + i + '.level', t('eduLevel'), { type: 'select', blank: t('choose'), options: EDU_LEVELS.map(l => [l, t('edu_' + l)]) }) + field('education.' + i + '.year', t('gradYear'), { type: 'number', attrs: ' inputmode="numeric" min="1950" max="2035"' }) + '</div>' +
+      field('education.' + i + '.institution', t('institution')) + field('education.' + i + '.major', t('major')) + '</div>').join('');
+    const exp = draft.experience.map((x, i) => '<div class="rounded-xl border border-slate-200 dark:border-slate-800 p-3 space-y-3" data-entry>' +
+      '<div class="flex items-center justify-between"><span class="text-sm font-medium">' + t('experienceN', { n: i + 1 }) + '</span><button type="button" data-action="remove-entry" data-list="experience" data-i="' + i + '" class="' + C.btnGhost + ' text-red-600 dark:text-red-400">' + icon('trash', 'w-4 h-4') + t('remove') + '</button></div>' +
+      '<div class="grid gap-3 sm:grid-cols-2">' + field('experience.' + i + '.position', t('position')) + field('experience.' + i + '.company', t('companyLabel')) + '</div>' +
+      '<div class="grid gap-3 grid-cols-2">' + field('experience.' + i + '.start', t('startMonth'), { type: 'month' }) +
+        (x.current ? '<div><span class="' + C.label + '">' + t('endMonth') + '</span><p class="py-2.5 text-sm ' + C.muted + '">' + t('present') + '</p></div>' : field('experience.' + i + '.end', t('endMonth'), { type: 'month' })) + '</div>' +
+      '<label class="flex items-center gap-2 text-sm"><input type="checkbox" class="un-switch" data-draft-check="experience.' + i + '.current"' + (x.current ? ' checked' : '') + ' data-rerender="1">' + t('currentlyWorking') + '</label>' +
+      field('experience.' + i + '.description', t('jobDesc'), { type: 'textarea', rows: 3, optional: true, max: 400 }) + '</div>').join('');
+    return '<div class="space-y-6"><section><div class="flex items-center justify-between mb-2"><h3 class="font-semibold">' + t('education') + '</h3><button type="button" data-action="add-entry" data-list="education" class="' + C.btnGhost + '">' + icon('plus', 'w-4 h-4') + t('addEducation') + '</button></div>' +
+      (draft.errors.education ? '<p class="' + C.err + ' mb-2" data-err>' + esc(draft.errors.education) + '</p>' : '') +
+      '<div class="space-y-3">' + (edu || '<p class="text-sm ' + C.muted + '">' + t('noEducationYet') + '</p>') + '</div></section>' +
+      '<section><div class="flex items-center justify-between mb-2"><h3 class="font-semibold">' + t('experience') + ' <span class="font-normal text-sm ' + C.muted + '">(' + t('optional') + ')</span></h3><button type="button" data-action="add-entry" data-list="experience" class="' + C.btnGhost + '">' + icon('plus', 'w-4 h-4') + t('addExperience') + '</button></div>' +
+      '<div class="space-y-3">' + (exp || '<p class="text-sm ' + C.muted + '">' + t('noExperienceYet') + '</p>') + '</div></section></div>';
+  }
+  function stepSkills() {
+    const levels = [[1, t('level_1')], [2, t('level_2')], [3, t('level_3')]];
+    const rows = draft.skills.map((s, i) => '<li class="py-3 grid grid-cols-12 gap-2 items-end">' +
+      '<div class="col-span-12 sm:col-span-4 flex items-center gap-2"><span class="' + LEVEL_CHIP[s.level] + '">' + esc(s.name) + '</span>' + proofBadge(draftProof(s.name)) + '</div>' +
+      '<div class="col-span-6 sm:col-span-4">' + field('skills.' + i + '.level', t('level'), { type: 'select', options: levels }) + '</div>' +
+      '<div class="col-span-4 sm:col-span-3">' + field('skills.' + i + '.years', t('yearsExp'), { type: 'number', attrs: ' min="0" max="50" step="0.5" inputmode="decimal"' }) + '</div>' +
+      '<div class="col-span-2 sm:col-span-1 flex justify-end"><button type="button" data-action="remove-entry" data-list="skills" data-i="' + i + '" class="' + C.btnIcon + ' text-red-600 dark:text-red-400" aria-label="' + esc(t('remove') + ' ' + s.name) + '">' + icon('trash', 'w-4 h-4') + '</button></div></li>').join('');
+    const langs = draft.languages.map((l, i) => '<li class="py-3 grid grid-cols-12 gap-2 items-end">' +
+      '<div class="col-span-6">' + field('languages.' + i + '.code', t('language'), { type: 'select', blank: t('choose'), options: LANG_CODES.map(c => [c, langName(c)]).sort((a, b) => a[1].localeCompare(b[1])) }) + '</div>' +
+      '<div class="col-span-4">' + field('languages.' + i + '.level', t('level'), { type: 'select', options: LANG_LEVELS.map(x => [x, t('lang_' + x)]) }) + '</div>' +
+      '<div class="col-span-2 flex justify-end"><button type="button" data-action="remove-entry" data-list="languages" data-i="' + i + '" class="' + C.btnIcon + ' text-red-600 dark:text-red-400" aria-label="' + esc(t('remove')) + '">' + icon('trash', 'w-4 h-4') + '</button></div></li>').join('');
+    return '<div class="space-y-6"><section><h3 class="font-semibold mb-1">' + t('skills') + '</h3><p class="text-sm ' + C.muted + ' mb-2">' + t('skillsStepHint') + '</p>' + skillInput('draft') +
+      (draft.errors.skills ? '<p class="' + C.err + '" data-err>' + esc(draft.errors.skills) + '</p>' : '') +
+      '<ul class="' + C.divider + ' mt-2">' + (rows || '<li class="py-3 text-sm ' + C.muted + '">' + t('noSkillsYet') + '</li>') + '</ul></section>' +
+      '<section><div class="flex items-center justify-between mb-1"><h3 class="font-semibold">' + t('languages') + '</h3><button type="button" data-action="add-entry" data-list="languages" class="' + C.btnGhost + '">' + icon('plus', 'w-4 h-4') + t('addLanguage') + '</button></div>' +
+      (draft.errors.languages ? '<p class="' + C.err + '" data-err>' + esc(draft.errors.languages) + '</p>' : '') +
+      '<ul class="' + C.divider + '">' + (langs || '<li class="py-3 text-sm ' + C.muted + '">' + t('noLanguagesYet') + '</li>') + '</ul></section></div>';
+  }
+  function draftProof(name) {
+    const n = name.toLowerCase();
+    const cs = draft.certificates.filter(c => (c.skills || []).some(s => s.toLowerCase() === n));
+    if (!cs.length) return 'none';
+    return cs.some(c => !certExpired(c)) ? 'certified' : 'expired';
+  }
+  function filePreview(file, cls) {
+    if (!file) return '';
+    if (file.type === 'application/pdf') return '<div class="' + cls + ' flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-xl">' + icon('file', 'w-8 h-8') + '<span class="text-xs font-semibold">PDF</span></div>';
+    const src = fileSrc(file);
+    if (!src) return '<div class="' + cls + ' flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl">' + icon('file', 'w-7 h-7') + '</div>';
+    return '<img src="' + esc(src) + '" alt="" class="' + cls + ' object-cover rounded-xl bg-slate-100 dark:bg-slate-800">';
+  }
+  function certCard(c, opts) {
+    opts = opts || {};
+    const exp = certExpired(c);
+    return '<div class="flex gap-3 items-start">' +
+      '<button type="button" data-action="view-cert" data-id="' + esc(c.id) + '" data-src="' + (opts.draft ? 'draft' : 'db') + '" class="shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-xl" aria-label="' + esc(t('viewCert') + ' ' + c.name) + '">' + filePreview(c.file, 'w-20 h-14') + '</button>' +
+      '<div class="flex-1 min-w-0"><p class="font-medium text-sm">' + esc(c.name) + '</p><p class="text-xs ' + C.muted + '">' + esc(c.issuer) + ' · ' + esc(fmtDate(c.issueDate)) + (c.expiryDate ? ' · ' + t('validUntil', { d: fmtDate(c.expiryDate) }) : '') + '</p>' +
+      (exp ? '<p class="mt-1 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300">' + icon('alert', 'w-3.5 h-3.5') + t('certExpiredLong') + '</p>' : '') +
+      ((c.skills || []).length ? '<div class="mt-1.5 flex flex-wrap gap-1">' + c.skills.map(s => '<span class="' + C.chip + ' py-0.5">' + esc(s) + '</span>').join('') + '</div>' : '') + '</div>' +
+      (opts.removable ? '<button type="button" data-action="remove-entry" data-list="certificates" data-i="' + opts.i + '" class="' + C.btnIcon + ' text-red-600 dark:text-red-400" aria-label="' + esc(t('remove') + ' ' + c.name) + '">' + icon('trash', 'w-4 h-4') + '</button>' : '') + '</div>';
+  }
+  function stepCerts() {
+    const f = draft.certForm;
+    const e = draft.errors;
+    const skillChecks = draft.skills.length ? draft.skills.map(s => '<label class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm cursor-pointer border-slate-200 dark:border-slate-700 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 dark:has-[:checked]:bg-blue-950 dark:has-[:checked]:text-blue-300 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500"><input type="checkbox" class="sr-only" data-cert-skill value="' + esc(s.name) + '"' + (f.skills.includes(s.name) ? ' checked' : '') + '>' + esc(s.name) + '</label>').join('')
+      : '<p class="text-sm ' + C.muted + '">' + t('addSkillsFirst') + '</p>';
+    return '<div class="space-y-6"><section><h3 class="font-semibold mb-2">' + t('yourCerts', { n: draft.certificates.length }) + '</h3>' +
+      (draft.certificates.length ? '<div class="space-y-4" data-testid="draft-certs">' + draft.certificates.map((c, i) => certCard(c, { draft: true, removable: true, i })).join('') + '</div>' : '<p class="text-sm ' + C.muted + '">' + t('noCertsYet') + '</p>') + '</section>' +
+      '<section class="rounded-xl border border-slate-200 dark:border-slate-800 p-3 space-y-3"><h3 class="font-semibold">' + t('addCert') + '</h3>' +
+        '<div><span class="' + C.label + '">' + t('certFile') + '</span><div class="flex items-center gap-3">' + (f.file ? filePreview(f.file, 'w-24 h-16') : '') +
+        '<label class="' + C.btnSecondary + ' cursor-pointer focus-within:ring-2 focus-within:ring-blue-500">' + icon('upload', 'w-4 h-4') + t(f.file ? 'changeFile' : 'chooseFile') + '<input type="file" accept="image/jpeg,image/png,application/pdf" data-file="cert" class="sr-only"></label></div>' +
+        (f.file ? '<p class="mt-1 text-xs ' + C.muted + '">' + esc(f.file.name) + ' · ' + (f.file.size / 1024 / 1024).toFixed(2) + ' MB' + (f.file.uploading ? ' · ' + t('uploading') : '') + '</p>' +
+          (f.file.localOnly ? '<p class="mt-1 text-xs text-amber-700 dark:text-amber-300" data-testid="file-not-stored">' + t(f.file.type === 'application/pdf' ? 'pdfNotStored' : 'uploadUnavailable') + '</p>' : '') : '<p class="mt-1 text-xs ' + C.muted + '">' + t('certFileHint') + '</p>') +
+        (e['certForm.file'] ? '<p class="' + C.err + '" data-err>' + esc(e['certForm.file']) + '</p>' : '') + '</div>' +
+        field('certForm.name', t('certName'), { ph: 'AWS Certified Cloud Practitioner' }) + field('certForm.issuer', t('issuer'), { ph: 'Amazon Web Services' }) +
+        '<div class="grid gap-3 grid-cols-2">' + field('certForm.issueDate', t('issueDate'), { type: 'date', attrs: ' max="' + today() + '"' }) + field('certForm.expiryDate', t('expiryDate'), { type: 'date', optional: true }) + '</div>' +
+        field('certForm.verify', t('verifyIdOrLink'), { optional: true, ph: 'ABC-123 / https://...' }) +
+        '<fieldset><legend class="' + C.label + '">' + t('provesSkills') + '</legend><div class="flex flex-wrap gap-2">' + skillChecks + '</div></fieldset>' +
+        '<button type="button" data-action="add-cert" class="' + C.btnSecondary + ' w-full">' + icon('plus', 'w-4 h-4') + t('addThisCert') + '</button></section></div>';
+  }
+  function viewRegister() {
+    const q = route().query;
+    const u = currentUser();
+    if (!u || u.role !== 'seeker') { authTab = 'register'; return viewAuth(); }
+    if (!draft || (q.get('edit') === '1' && draft.mode !== 'edit')) {
+      const p = myProfile();
+      draft = p ? draftFromProfile(p) : blankDraft();
+    }
+    // A section's "Edit" link names its step; honour it once per visit.
+    if (q.get('step') && draft.stepHash !== location.hash) {
+      draft.step = Math.min(4, Math.max(1, Number(q.get('step')) || 1));
+      draft.stepHash = location.hash;
+    }
+    const s = draft.step;
+    const body = [stepBio, stepEduExp, stepSkills, stepCerts][s - 1]();
+    return '<div class="max-w-2xl mx-auto">' +
+      (draft.mode === 'edit' ? backLink('#/profile', t('backToProfile')) : '') +
+      '<h1 class="' + C.h1 + '">' + t(draft.mode === 'edit' ? 'editProfile' : 'createProfile') + '</h1>' +
+      '<div class="mt-3" data-testid="stepper"><div class="flex items-center justify-between text-sm"><span class="font-medium">' + t('stepOf', { n: s, total: 4 }) + ': ' + t(STEP_KEYS[s - 1]) + '</span><span class="' + C.muted + '">' + (s * 25) + '%</span></div>' +
+        '<div class="mt-2 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="' + s + '" aria-label="' + esc(t('progress')) + '"><div class="h-full rounded-full bg-blue-600 transition-all motion-reduce:transition-none" style="width:' + (s * 25) + '%"></div></div>' +
+        '<ol class="mt-3 hidden sm:grid grid-cols-4 gap-2 text-xs">' + STEP_KEYS.map((k, i) => '<li><button type="button" data-action="goto-step" data-step="' + (i + 1) + '" class="w-full text-start ' + (i + 1 === s ? 'text-blue-700 dark:text-blue-300 font-semibold' : i + 1 < s ? 'text-slate-700 dark:text-slate-300' : C.muted) + '"' + (i + 1 > s ? ' disabled' : '') + '>' + (i + 1) + '. ' + t(k) + '</button></li>').join('') + '</ol></div>' +
+      '<form data-form="register" class="mt-4 ' + C.section + '" novalidate>' + body +
+      '<div class="mt-6 flex gap-2 justify-between">' + (s > 1 ? '<button type="button" data-action="step-back" class="' + C.btnSecondary + '">' + t('back') + '</button>' : '<span></span>') +
+      (s < 4 ? '<button type="submit" class="' + C.btnPrimary + '">' + t('next') + '</button>' : '<button type="submit" class="' + C.btnPrimary + '" data-finish>' + t(draft.mode === 'edit' ? 'saveChanges' : 'saveFinish') + '</button>') + '</div></form></div>';
+  }
+  function validateStep(s) {
+    const e = {}; const req = t('errRequired');
+    if (s === 1) {
+      const b = draft.bio;
+      ['fullName', 'birthDate', 'gender', 'country', 'city', 'nationality', 'email', 'phoneCode', 'phone', 'summary'].forEach(k => { if (!String(b[k] || '').trim()) e['bio.' + k] = req; });
+      if (b.fullName && b.fullName.trim().length < 3) e['bio.fullName'] = t('errName');
+      if (b.birthDate) { const age = (Date.now() - new Date(b.birthDate)) / (365.25 * DAY); if (age < 15 || age > 100) e['bio.birthDate'] = t('errAge'); }
+      if (b.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(b.email.trim())) e['bio.email'] = t('errEmail');
+      if (b.phone && !/^[0-9 ]{6,15}$/.test(b.phone.trim())) e['bio.phone'] = t('errPhone');
+      if (b.summary && b.summary.trim().length < 30) e['bio.summary'] = t('errSummary');
+    }
+    if (s === 2) {
+      if (!draft.education.length) e.education = t('errMinEdu');
+      const yr = new Date().getFullYear() + 8;
+      draft.education.forEach((x, i) => {
+        ['level', 'institution', 'major', 'year'].forEach(k => { if (!String(x[k] || '').trim()) e['education.' + i + '.' + k] = req; });
+        if (x.year && (Number(x.year) < 1950 || Number(x.year) > yr)) e['education.' + i + '.year'] = t('errYear');
+      });
+      draft.experience.forEach((x, i) => {
+        ['position', 'company', 'start'].forEach(k => { if (!String(x[k] || '').trim()) e['experience.' + i + '.' + k] = req; });
+        if (!x.current && !x.end) e['experience.' + i + '.end'] = req;
+        if (!x.current && x.end && x.start && x.end < x.start) e['experience.' + i + '.end'] = t('errEndBefore');
+      });
+    }
+    if (s === 3) {
+      if (!draft.skills.length) e.skills = t('errMinSkill');
+      draft.skills.forEach((x, i) => { const y = Number(x.years); if (x.years === '' || isNaN(y) || y < 0 || y > 50) e['skills.' + i + '.years'] = t('errYears'); });
+      if (!draft.languages.length) e.languages = t('errMinLang');
+      draft.languages.forEach((x, i) => { if (!x.code) e['languages.' + i + '.code'] = req; });
+    }
+    return e;
+  }
+  function validateCertForm() {
+    const f = draft.certForm, e = {}, req = t('errRequired');
+    if (!f.file) e['certForm.file'] = req;
+    if (!f.name.trim()) e['certForm.name'] = req;
+    if (!f.issuer.trim()) e['certForm.issuer'] = req;
+    if (!f.issueDate) e['certForm.issueDate'] = req;
+    if (f.expiryDate && f.issueDate && f.expiryDate <= f.issueDate) e['certForm.expiryDate'] = t('errExpiry');
+    return e;
+  }
+  function focusFirstError() {
+    const el = $('[data-err]');
+    if (!el) return;
+    const ctl = el.parentElement.querySelector('input,select,textarea,button');
+    (ctl || el).scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    if (ctl) ctl.focus({ preventScroll: true });
+  }
+  async function finishRegister(btn) {
+    const b = draft.bio;
+    const fileOut = f => (f ? { url: f.url || '', id: f.id || '', type: f.type || '', name: f.name || '', size: f.size || 0 } : null);
+    const payload = {
+      bio: { ...b, fullName: b.fullName.trim(), email: b.email.trim(), phone: b.phone.replace(/\s+/g, ''), summary: b.summary.trim() },
+      education: draft.education, experience: draft.experience, languages: draft.languages,
+      skills: draft.skills.map(s => ({ id: s.id, name: s.name, level: Number(s.level), years: Number(s.years) })),
+      certificates: draft.certificates.map(c => ({ id: c.id, name: c.name, issuer: c.issuer, issueDate: c.issueDate, expiryDate: c.expiryDate, verify: c.verify, skills: c.skills, file: fileOut(c.file) })),
+    };
+    const label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = t('saving'); }
+    try { await api.saveProfile(payload); }
+    catch (e) { if (btn) { btn.disabled = false; btn.textContent = label; } toast(t('saveFailed')); return; }
+    const wasEdit = draft.mode === 'edit';
+    draft = null;
+    toast(t(wasEdit ? 'profileSaved' : 'profileCreated'));
+    go('#/profile');
+  }
+
+
+  // Images are downscaled before they are kept so the in-browser store stays small.
+  function readFile(file, maxDim) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onerror = () => reject(r.error);
+      r.onload = () => {
+        if (!maxDim || file.type === 'application/pdf') return resolve(r.result);
+        const img = new Image();
+        img.onload = () => {
+          const k = Math.min(1, maxDim / Math.max(img.width, img.height));
+          if (k === 1 && file.size < 400000) return resolve(r.result);
+          const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          resolve(cv.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => resolve(r.result);
+        img.src = r.result;
+      };
+      r.readAsDataURL(file);
+    });
+  }
+
+  /* ---------- CV-style profile ---------- */
+  // viewer: 'self' | 'company' | 'public'. Company and public viewers see the
+  // phone and certificates only when the profile owner allows it.
+  function renderCV(p, viewer, opts) {
+    opts = opts || {};
+    const self = viewer === 'self';
+    const showPhone = self || p.privacy.showPhone;
+    const showCerts = self || p.privacy.showCerts;
+    const skills = skillsOf(p.id).slice().sort((a, b) => b.level - a.level || b.years - a.years);
+    const certs = certsOf(p.id);
+    const editBtn = step => self ? '<a href="#/register?edit=1&step=' + step + '" class="' + C.btnGhost + '" aria-label="' + esc(t('edit')) + '">' + icon('pencil', 'w-4 h-4') + t('edit') + '</a>' : '';
+    const head = (title, step) => '<div class="flex items-center justify-between gap-2 mb-2"><h2 class="font-semibold">' + esc(title) + '</h2>' + (step ? editBtn(step) : '') + '</div>';
+    const latest = (p.experience || []).slice().sort((a, b) => (b.current - a.current) || (b.start || '').localeCompare(a.start || ''))[0];
+    const age = p.birthDate ? Math.floor((Date.now() - new Date(p.birthDate)) / (365.25 * DAY)) : null;
+    let html = '<section class="' + C.section + '"><div class="flex flex-col sm:flex-row sm:items-start gap-4">' + avatar(p.photo, p.fullName, 'w-24 h-24 text-2xl') +
+      '<div class="flex-1 min-w-0"><div class="flex items-start justify-between gap-2"><div><h1 class="' + C.h1 + '">' + esc(p.fullName) + '</h1>' + (p.isDemo ? '<span class="' + C.chip + ' mt-1">' + t('demoData') + '</span>' : '') +
+      (latest ? '<p class="' + C.muted + '">' + esc(latest.position) + ' · ' + esc(latest.company) + '</p>' : '') + '</div>' + editBtn(1) + '</div>' +
+      '<dl class="mt-3 grid gap-x-6 gap-y-1.5 sm:grid-cols-2 text-sm">' +
+        '<div class="flex gap-2"><dt class="' + C.muted + '">' + t('residence') + '</dt><dd>' + flag(p.country) + ' ' + esc(p.city) + ', ' + esc(countryName(p.country)) + '</dd></div>' +
+        '<div class="flex gap-2"><dt class="' + C.muted + '">' + t('nationality') + '</dt><dd>' + esc(countryName(p.nationality)) + '</dd></div>' +
+        (age != null ? '<div class="flex gap-2"><dt class="' + C.muted + '">' + t('age') + '</dt><dd>' + t('nYearsOld', { n: age }) + ' · ' + esc(t('gender_' + p.gender)) + '</dd></div>' : '') +
+        '<div class="flex gap-2"><dt class="' + C.muted + '">' + t('experience') + '</dt><dd>' + t('nYears', { n: fmtNum(experienceYears(p)) }) + '</dd></div>' +
+        '<div class="flex gap-2 min-w-0"><dt class="' + C.muted + '">' + t('email') + '</dt><dd class="truncate"><a class="text-blue-700 dark:text-blue-300 hover:underline" href="mailto:' + esc(p.email) + '">' + esc(p.email) + '</a></dd></div>' +
+        '<div class="flex gap-2"><dt class="' + C.muted + '">' + t('phone') + '</dt><dd data-testid="cv-phone">' + (showPhone ? '+' + esc(DIAL[p.phoneCode] || '') + ' ' + esc(p.phone) : '<span class="' + C.muted + '">' + t('hiddenByCandidate') + '</span>') + '</dd></div>' +
+      '</dl></div></div></section>';
+    html += '<section class="' + C.section + '">' + head(t('summary'), 1) + '<p class="text-sm leading-relaxed whitespace-pre-line" dir="auto">' + esc(p.summary) + '</p></section>';
+    html += '<section class="' + C.section + '" data-testid="cv-skills">' + head(t('skills'), 3) +
+      '<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs ' + C.muted + ' mb-3"><span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>' + t('level_1') + '</span><span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-300"></span>' + t('level_2') + '</span><span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>' + t('level_3') + '</span></div>' +
+      (skills.length ? '<ul class="grid gap-2 sm:grid-cols-2">' + skills.map(s => '<li class="flex items-center justify-between gap-2"><span class="flex items-center gap-2 min-w-0"><span class="' + LEVEL_CHIP[s.level] + '">' + esc(s.name) + '</span><span class="text-xs ' + C.muted + '">' + t('nYearsShort', { n: fmtNum(s.years) }) + '</span></span>' + proofBadge(skillProof(p.id, s.name)) + '</li>').join('') + '</ul>' : '<p class="text-sm ' + C.muted + '">' + t('noSkillsYet') + '</p>') +
+      ((p.languages || []).length ? '<h3 class="text-sm font-medium mt-4 mb-1">' + t('languages') + '</h3><p class="text-sm">' + p.languages.map(l => esc(langName(l.code)) + ' <span class="' + C.muted + '">(' + t('lang_' + l.level) + ')</span>').join(', ') + '</p>' : '') + '</section>';
+    html += '<section class="' + C.section + '">' + head(t('experience'), 2) + ((p.experience || []).length ? '<ol class="space-y-4">' + p.experience.slice().sort((a, b) => (b.start || '').localeCompare(a.start || '')).map(x =>
+      '<li class="border-s-2 border-blue-200 dark:border-blue-900 ps-3"><p class="font-medium text-sm">' + esc(x.position) + '</p><p class="text-sm">' + esc(x.company) + '</p><p class="text-xs ' + C.muted + '">' + esc(fmtMonth(x.start)) + ' - ' + esc(x.current ? t('present') : fmtMonth(x.end)) + '</p>' + (x.description ? '<p class="mt-1 text-sm">' + esc(x.description) + '</p>' : '') + '</li>').join('') + '</ol>' : '<p class="text-sm ' + C.muted + '">' + t('noExperienceYet') + '</p>') + '</section>';
+    html += '<section class="' + C.section + '">' + head(t('education'), 2) + ((p.education || []).length ? '<ul class="space-y-3">' + p.education.slice().sort((a, b) => String(b.year).localeCompare(String(a.year))).map(e =>
+      '<li><p class="font-medium text-sm">' + esc(e.institution) + '</p><p class="text-sm">' + esc(t('edu_' + e.level)) + ', ' + esc(e.major) + '</p><p class="text-xs ' + C.muted + '">' + esc(e.year) + '</p></li>').join('') + '</ul>' : '') + '</section>';
+    if (!opts.hideCerts) {
+      html += '<section class="' + C.section + '" data-testid="cv-certs">' + head(t('certificates') + ' (' + certCount(p) + ')', 4) +
+        (showCerts ? (certs.length ? '<div class="grid gap-4 sm:grid-cols-2">' + certs.map(c => certCard(c) + (c.verify ? '<p class="-mt-2 ms-24 text-xs ' + C.muted + ' break-all">' + t('verification') + ': ' + (/^https?:\/\//.test(c.verify) ? '<a href="' + esc(c.verify) + '" target="_blank" rel="noopener" class="text-blue-700 dark:text-blue-300 hover:underline">' + esc(c.verify) + '</a>' : esc(c.verify)) + '</p>' : '')).join('') + '</div>' : '<p class="text-sm ' + C.muted + '">' + t('noCertsYet') + '</p>')
+          : '<p class="text-sm ' + C.muted + '" data-testid="certs-hidden">' + t('certsHiddenByCandidate') + '</p>') + '</section>';
+    }
+    return html;
+  }
+  function viewProfile() {
+    const r = role();
+    if (r === 'guest') { authTab = 'login'; return viewAuth(); }
+    if (r === 'company') return viewCompanyAccount();
+    const p = myProfile();
+    if (!p) return '<div class="max-w-lg mx-auto">' + emptyState(t('noProfileTitle'), t('noProfileBody'), '<a href="#/register" class="' + C.btnPrimary + '">' + t('createProfile') + '</a>') + signOutBlock() + '</div>';
+    const cp = completeness(p);
+    const apps = db.applications.filter(a => a.profileId === p.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const aside = '<section class="' + C.section + '" data-testid="completeness"><div class="flex items-center justify-between"><h2 class="font-semibold">' + t('profileCompleteness') + '</h2><span class="text-lg font-bold text-blue-700 dark:text-blue-300">' + cp.pct + '%</span></div>' +
+        '<div class="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden"><div class="h-full rounded-full bg-blue-600" style="width:' + cp.pct + '%"></div></div>' +
+        (cp.missing.length ? '<ul class="mt-3 space-y-1.5">' + cp.missing.map(k => '<li><a href="#/register?edit=1&step=' + ({ photo: 1, bio: 1, phone: 1, summary: 1, education: 2, experience: 2, skills: 3, languages: 3, certs: 4 })[k] + '" class="text-sm text-blue-700 dark:text-blue-300 hover:underline">' + t('suggest_' + k) + '</a></li>').join('') + '</ul>' : '<p class="mt-2 text-sm ' + C.muted + '">' + t('profileComplete') + '</p>') + '</section>' +
+      '<section class="' + C.section + ' space-y-3"><button type="button" data-action="share-profile" class="' + C.btnPrimary + ' w-full">' + icon('link', 'w-4 h-4') + t('shareProfile') + '</button>' +
+        '<a href="#/p/' + p.id + '" class="' + C.btnSecondary + ' w-full">' + t('previewAsCompany') + '</a></section>' +
+      '<section class="' + C.section + '"><h2 class="font-semibold mb-1">' + t('privacy') + '</h2><p class="text-xs ' + C.muted + ' mb-2">' + t('privacyHint') + '</p><div class="' + C.divider + '">' +
+        '<label class="flex items-center justify-between gap-3 py-2.5"><span class="text-sm">' + t('showPhoneToCompanies') + '</span><input type="checkbox" class="un-switch" data-privacy="showPhone"' + (p.privacy.showPhone ? ' checked' : '') + '></label>' +
+        '<label class="flex items-center justify-between gap-3 py-2.5"><span class="text-sm">' + t('showCertsToCompanies') + '</span><input type="checkbox" class="un-switch" data-privacy="showCerts"' + (p.privacy.showCerts ? ' checked' : '') + '></label></div></section>' +
+      '<section class="' + C.section + '"><h2 class="font-semibold mb-2">' + t('myApplications') + '</h2>' + (apps.length ? '<ul class="' + C.divider + '">' + apps.map(a => { const j = getJob(a.jobId); return j ? '<li class="py-2.5 flex items-center justify-between gap-2"><a href="#/job/' + j.id + '" class="min-w-0"><span class="block text-sm font-medium truncate hover:underline">' + esc(j.title) + '</span><span class="block text-xs ' + C.muted + '">' + esc(companyOf(j).name) + ' · ' + esc(fmtDate(a.createdAt)) + '</span></a><span class="' + STATUS_CHIP[a.status] + '">' + t('status_' + a.status) + '</span></li>' : ''; }).join('') + '</ul>' : '<p class="text-sm ' + C.muted + '">' + t('noApplications') + '</p>') + '</section>' +
+      signOutBlock();
+    return '<div class="lg:grid lg:grid-cols-3 lg:gap-6"><div class="lg:col-span-2 space-y-4" data-testid="cv">' + renderCV(p, 'self') + '</div><div class="mt-4 lg:mt-0 space-y-4">' + aside + '</div></div>';
+  }
+  function signOutBlock() {
+    return '<button type="button" data-action="sign-out" class="' + C.btnSecondary + ' w-full mt-4">' + icon('logout', 'w-4 h-4') + t('signOut') + '</button>';
+  }
+  function viewPublicProfile(id) {
+    const p = getProfile(id);
+    if (!p) return emptyState(t('profileNotFound'), t('profileNotFoundBody'), '<a href="#/" class="' + C.btnPrimary + '">' + t('navHome') + '</a>');
+    const own = myProfile() && myProfile().id === id;
+    return '<div class="max-w-3xl mx-auto space-y-4">' + (own ? '<div class="rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-200 text-sm p-3 flex items-center justify-between gap-2"><span>' + t('previewNotice') + '</span><a href="#/profile" class="' + C.btnGhost + '">' + t('backToProfile') + '</a></div>' : '') + renderCV(p, own ? 'company' : 'public') + '</div>';
+  }
+
+  /* ---------- applying ---------- */
+  function openApply(jobId) {
+    const j = getJob(jobId);
+    const r = role();
+    if (r !== 'seeker') { authTab = 'register'; toast(t('signInToApply')); go('#/auth'); return; }
+    const p = myProfile();
+    if (!p) { toast(t('profileToApply')); go('#/register'); return; }
+    const m = matchJob(j, p.id);
+    const certs = certsOf(p.id);
+    const relevant = new Set(jobSkills(j).map(s => s.toLowerCase()));
+    const topSkills = skillsOf(p.id).slice(0, 6);
+    openModal('<form data-form="apply" data-job="' + j.id + '" class="space-y-4">' +
+      '<div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3"><p class="text-xs ' + C.muted + ' mb-2">' + t('autoFilled') + '</p><div class="flex items-center gap-3">' + avatar(p.photo, p.fullName, 'w-12 h-12') +
+        '<div class="min-w-0 text-sm"><p class="font-semibold">' + esc(p.fullName) + '</p><p class="' + C.muted + ' truncate">' + esc(p.email) + (p.privacy.showPhone ? ' · +' + esc(DIAL[p.phoneCode] || '') + ' ' + esc(p.phone) : '') + '</p><p class="' + C.muted + '">' + flag(p.country) + ' ' + esc(p.city) + ' · ' + t('nYears', { n: fmtNum(experienceYears(p)) }) + '</p></div></div>' +
+        '<div class="mt-2 flex flex-wrap gap-1">' + topSkills.map(s => '<span class="' + LEVEL_CHIP[s.level] + '">' + esc(s.name) + '</span>').join('') + '</div>' +
+        '<div class="mt-3">' + matchChip(m.pct) + '</div></div>' +
+      '<fieldset><legend class="font-medium text-sm mb-1">' + t('attachCerts') + '</legend>' +
+        (!p.privacy.showCerts ? '<p class="text-xs text-amber-700 dark:text-amber-300 mb-2">' + t('certsPrivateWarning') + '</p>' : '') +
+        (certs.length ? '<div class="space-y-2">' + certs.map(c => '<label class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-700 p-2 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 dark:has-[:checked]:bg-blue-950">' +
+          '<input type="checkbox" name="cert" value="' + esc(c.id) + '" class="w-4 h-4 accent-blue-600"' + ((c.skills || []).some(s => relevant.has(s.toLowerCase())) && !certExpired(c) ? ' checked' : '') + '>' + filePreview(c.file, 'w-12 h-9') +
+          '<span class="min-w-0 text-sm"><span class="block font-medium truncate">' + esc(c.name) + '</span><span class="block text-xs ' + C.muted + '">' + esc(c.issuer) + (certExpired(c) ? ' · ' + t('certExpiredBadge') : '') + '</span></span></label>').join('') + '</div>'
+          : '<p class="text-sm ' + C.muted + '">' + t('noCertsToAttach') + '</p>') + '</fieldset>' +
+      '<div><label class="' + C.label + '" for="apply-msg">' + t('shortMessage') + ' <span class="font-normal ' + C.muted + '">(' + t('optional') + ')</span></label><textarea id="apply-msg" name="message" rows="3" maxlength="500" class="' + C.input + '" placeholder="' + esc(t('messagePh')) + '"></textarea></div>' +
+      '<button type="submit" class="' + C.btnPrimary + ' w-full" data-submit>' + t('sendApplication') + '</button></form>', { title: t('applyTo', { title: j.title }) });
+  }
+
+  /* ==========================================================================
+     Views: company
+     ========================================================================== */
+  function needCompany() {
+    if (role() === 'company' && myCompany()) return null;
+    return '<div class="max-w-lg mx-auto">' + emptyState(t('companyOnlyTitle'), t('companyOnlyBody'), '<a href="#/auth" class="' + C.btnPrimary + '">' + t('signInAsCompany') + '</a>') + '</div>';
+  }
+  function viewCompanyAccount() {
+    const co = myCompany();
+    if (!co) return needCompany();
+    const jobs = db.jobs.filter(j => j.companyId === co.id);
+    return '<div class="max-w-lg mx-auto space-y-4"><section class="' + C.section + ' flex items-center gap-4">' + companyLogo(co.name) +
+      '<div><h1 class="text-xl font-bold">' + esc(co.name) + '</h1><p class="text-sm ' + C.muted + '">' + flag(co.country) + ' ' + esc(co.city) + ', ' + esc(countryName(co.country)) + ' · ' + t('cat_' + co.industry) + '</p></div></section>' +
+      '<section class="' + C.section + ' ' + C.divider + '">' +
+        '<a href="#/dashboard" class="flex items-center justify-between py-3 text-sm font-medium"><span>' + t('navDashboard') + '</span><span class="' + C.muted + '">' + t('nJobs', { n: jobs.length }) + '</span></a>' +
+        '<a href="#/post" class="flex items-center justify-between py-3 text-sm font-medium"><span>' + t('postJob') + '</span>' + icon('chevron', 'w-4 h-4 text-slate-400') + '</a></section>' +
+      signOutBlock() + '</div>';
+  }
+
+  let postDraft = null;
+  function blankPost() {
+    const co = myCompany() || {};
+    return { title: '', category: co.industry || 'it', type: 'fulltime', model: 'onsite', country: co.country || '', city: co.city || '', currency: COUNTRY_CURRENCY[co.country] || 'USD',
+      salaryMin: '', salaryMax: '', period: 'month', visaSponsor: false, relocation: false, remoteWorldwide: false, required: [], nice: [], minExp: 0, education: 's1',
+      languages: [{ code: 'en', level: 'intermediate' }], description: '', qualifications: '', benefits: '', visaNote: '', timezone: COUNTRY_TZ[co.country] || '', errors: {} };
+  }
+  function viewPost() {
+    const gate = needCompany(); if (gate) return gate;
+    if (!postDraft) postDraft = blankPost();
+    const d = postDraft, e = d.errors;
+    const cls = k => e[k] ? C.inputErr : C.input;
+    const err = k => e[k] ? '<p class="' + C.err + '" data-err>' + esc(e[k]) + '</p>' : '';
+    const inp = (k, label, type, attrs) => '<div><label class="' + C.label + '" for="pj-' + k + '">' + esc(label) + '</label><input id="pj-' + k + '" type="' + (type || 'text') + '" data-post="' + k + '" value="' + esc(d[k]) + '" class="' + cls(k) + '"' + (attrs || '') + '>' + err(k) + '</div>';
+    const sel = (k, label, opts) => '<div><label class="' + C.label + '" for="pj-' + k + '">' + esc(label) + '</label><select id="pj-' + k + '" data-post="' + k + '" class="' + cls(k) + '">' + opts.map(([v, l]) => '<option value="' + esc(v) + '"' + (String(d[k]) === String(v) ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select>' + err(k) + '</div>';
+    const ta = (k, label, hint) => '<div><label class="' + C.label + '" for="pj-' + k + '">' + esc(label) + '</label><textarea id="pj-' + k + '" data-post="' + k + '" rows="4" class="' + cls(k) + '">' + esc(d[k]) + '</textarea>' + (hint ? '<p class="mt-1 text-xs ' + C.muted + '">' + esc(hint) + '</p>' : '') + err(k) + '</div>';
+    const sw = (k, label) => '<label class="flex items-center justify-between gap-3 py-2.5"><span class="text-sm">' + esc(label) + '</span><input type="checkbox" class="un-switch" data-post-bool="' + k + '"' + (d[k] ? ' checked' : '') + '></label>';
+    const skillList = kind => '<ul class="' + C.divider + ' mt-2">' + (d[kind].length ? d[kind].map((s, i) => '<li class="py-2 flex items-center gap-2"><span class="flex-1 text-sm font-medium">' + esc(s.name) + '</span>' +
+      '<label class="sr-only" for="pl-' + kind + i + '">' + t('level') + '</label><select id="pl-' + kind + i + '" data-post-level="' + kind + '" data-i="' + i + '" class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1.5 text-sm">' + [1, 2, 3].map(l => '<option value="' + l + '"' + (s.level === l ? ' selected' : '') + '>' + t('level_' + l) + '</option>').join('') + '</select>' +
+      '<button type="button" data-action="post-skill-remove" data-kind="' + kind + '" data-i="' + i + '" class="' + C.btnIcon + ' text-red-600 dark:text-red-400" aria-label="' + esc(t('remove') + ' ' + s.name) + '">' + icon('trash', 'w-4 h-4') + '</button></li>').join('') : '<li class="py-2 text-sm ' + C.muted + '">' + t('noSkillsYet') + '</li>') + '</ul>';
+    return '<div class="max-w-2xl mx-auto"><h1 class="' + C.h1 + '">' + t('postJob') + '</h1><p class="mt-1 text-sm ' + C.muted + '">' + t('postJobAs', { co: myCompany().name }) + '</p>' +
+      '<form data-form="post" class="mt-4 space-y-4" novalidate>' +
+      '<section class="' + C.section + ' space-y-4"><h2 class="font-semibold">' + t('jobBasics') + '</h2>' + inp('title', t('jobTitle'), 'text', ' placeholder="Senior Backend Engineer"') +
+        '<div class="grid gap-4 sm:grid-cols-3">' + sel('category', t('category'), CATEGORIES.map(c => [c, t('cat_' + c)])) + sel('type', t('jobType'), JOB_TYPES.map(c => [c, t('type_' + c)])) + sel('model', t('workModel'), WORK_MODELS.map(c => [c, t('model_' + c)])) + '</div></section>' +
+      '<section class="' + C.section + ' space-y-4"><h2 class="font-semibold">' + t('locationSalary') + '</h2><div class="grid gap-4 sm:grid-cols-2">' +
+        '<div><span class="' + C.label + '">' + t('country') + '</span><button type="button" data-action="post-country" class="' + cls('country') + ' flex items-center gap-2 text-start"><span aria-hidden="true">' + flag(d.country) + '</span><span class="flex-1 truncate">' + esc(d.country ? countryName(d.country) : t('chooseCountry')) + '</span>' + icon('down', 'w-4 h-4 text-slate-400') + '</button>' + err('country') + '</div>' + inp('city', t('city')) + '</div>' +
+        '<div class="grid gap-4 grid-cols-2 sm:grid-cols-4">' + sel('currency', t('currency'), Object.keys(RATES).map(c => [c, c])) + inp('salaryMin', t('salaryMinL'), 'number', ' min="0" inputmode="numeric"') + inp('salaryMax', t('salaryMaxL'), 'number', ' min="0" inputmode="numeric"') +
+          sel('period', t('period'), [['month', t('periodMonth')], ['year', t('periodYear')], ['hour', t('periodHour')]]) + '</div>' +
+        inp('timezone', t('timezone')) + '</section>' +
+      '<section class="' + C.section + '"><h2 class="font-semibold mb-1">' + t('visaInfo') + '</h2><div class="' + C.divider + '">' + sw('visaSponsor', t('visaSponsor')) + sw('relocation', t('relocation')) + sw('remoteWorldwide', t('remoteWorldwideL')) + '</div>' +
+        '<div class="mt-2"><label class="' + C.label + '" for="pj-visaNote">' + t('visaNote') + ' <span class="font-normal ' + C.muted + '">(' + t('optional') + ')</span></label><input id="pj-visaNote" data-post="visaNote" value="' + esc(d.visaNote) + '" class="' + C.input + '"></div></section>' +
+      '<section class="' + C.section + ' space-y-4"><h2 class="font-semibold">' + t('skills') + '</h2>' +
+        '<div><h3 class="text-sm font-medium mb-1">' + t('required') + '</h3>' + skillInput('post-required', t('addRequiredSkill')) + err('required') + skillList('required') + '</div>' +
+        '<div><h3 class="text-sm font-medium mb-1">' + t('nicePlus') + '</h3>' + skillInput('post-nice', t('addNiceSkill')) + skillList('nice') + '</div>' +
+        '<div class="grid gap-4 sm:grid-cols-2">' + inp('minExp', t('minExpYears'), 'number', ' min="0" max="30" inputmode="numeric"') + sel('education', t('education'), [['any', t('edu_any')]].concat(EDU_LEVELS.map(l => [l, t('eduMin', { lv: t('edu_' + l) })]))) + '</div>' +
+        '<div><div class="flex items-center justify-between"><h3 class="text-sm font-medium">' + t('languages') + '</h3><button type="button" data-action="post-lang-add" class="' + C.btnGhost + '">' + icon('plus', 'w-4 h-4') + t('addLanguage') + '</button></div>' +
+          '<ul class="space-y-2 mt-1">' + d.languages.map((l, i) => '<li class="flex gap-2"><select data-post-lang="code" data-i="' + i + '" class="' + C.input + '" aria-label="' + esc(t('language')) + '">' + LANG_CODES.map(c => [c, langName(c)]).sort((a, b) => a[1].localeCompare(b[1])).map(([c, n]) => '<option value="' + c + '"' + (l.code === c ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>' +
+            '<select data-post-lang="level" data-i="' + i + '" class="' + C.input + '" aria-label="' + esc(t('level')) + '">' + LANG_LEVELS.map(x => '<option value="' + x + '"' + (l.level === x ? ' selected' : '') + '>' + t('lang_' + x) + '</option>').join('') + '</select>' +
+            '<button type="button" data-action="post-lang-remove" data-i="' + i + '" class="' + C.btnIcon + ' shrink-0 text-red-600 dark:text-red-400" aria-label="' + esc(t('remove')) + '">' + icon('trash', 'w-4 h-4') + '</button></li>').join('') + '</ul></div></section>' +
+      '<section class="' + C.section + ' space-y-4"><h2 class="font-semibold">' + t('description') + '</h2>' + ta('description', t('description')) + ta('qualifications', t('qualifications'), t('onePerLine')) + ta('benefits', t('benefits'), t('onePerLine')) + '</section>' +
+      '<button type="submit" class="' + C.btnPrimary + ' w-full" data-submit>' + t('publishJob') + '</button></form></div>';
+  }
+  function validatePost() {
+    const d = postDraft, e = {}, req = t('errRequired');
+    ['title', 'country', 'city', 'salaryMin', 'salaryMax', 'description'].forEach(k => { if (!String(d[k]).trim()) e[k] = req; });
+    if (d.salaryMin !== '' && d.salaryMax !== '' && Number(d.salaryMax) < Number(d.salaryMin)) e.salaryMax = t('errSalaryRange');
+    if (!d.required.length) e.required = t('errMinRequired');
+    return e;
+  }
+  async function submitPost(btn) {
+    const d = postDraft;
+    d.errors = validatePost();
+    if (Object.keys(d.errors).length) { render(); focusFirstError(); return; }
+    btn.disabled = true; btn.textContent = t('publishing');
+    const lines = s => s.split('\n').map(x => x.trim()).filter(Boolean);
+    let job;
+    try {
+      job = await api.createJob({ companyId: myCompany().id, title: d.title.trim(), category: d.category, country: d.country, city: d.city.trim(),
+      currency: d.currency, salaryMin: Number(d.salaryMin), salaryMax: Number(d.salaryMax), period: d.period, type: d.type, model: d.model,
+      remoteWorldwide: d.remoteWorldwide && d.model === 'remote', visaSponsor: d.visaSponsor, relocation: d.relocation,
+      required: d.required.slice(), nice: d.nice.slice(), minExp: Number(d.minExp) || 0, education: d.education, languages: d.languages.slice(),
+      description: d.description.trim(), qualifications: lines(d.qualifications), benefits: lines(d.benefits), visaNote: d.visaNote.trim(), timezone: d.timezone.trim() });
+    } catch (err) { btn.disabled = false; btn.textContent = t('publishJob'); toast(t('saveFailed')); return; }
+    postDraft = null;
+    toast(t('jobPublished'));
+    go('#/job/' + job.id);
+  }
+
+  function viewDashboard() {
+    const gate = needCompany(); if (gate) return gate;
+    const co = myCompany();
+    const jobs = db.jobs.filter(j => j.companyId === co.id).sort((a, b) => b.postedAt.localeCompare(a.postedAt));
+    return '<div class="flex items-end justify-between gap-3 mb-4"><div><h1 class="' + C.h1 + '">' + t('navDashboard') + '</h1><p class="text-sm ' + C.muted + '">' + esc(co.name) + '</p></div><a href="#/post" class="' + C.btnPrimary + '">' + icon('plus', 'w-4 h-4') + t('postJob') + '</a></div>' +
+      (jobs.length ? '<ul class="' + C.card + ' ' + C.divider + ' overflow-hidden" data-testid="company-jobs">' + jobs.map(j => {
+        const apps = db.applications.filter(a => a.jobId === j.id);
+        const nNew = apps.filter(a => a.status === 'new').length;
+        return '<li><a href="#/dashboard/' + j.id + '" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500">' +
+          '<span class="flex-1 min-w-0"><span class="block font-medium truncate">' + esc(j.title) + '</span><span class="block text-xs ' + C.muted + '">' + flag(j.country) + ' ' + esc(j.city) + ' · ' + esc(relDays(j.postedAt)) + '</span></span>' +
+          '<span class="text-end shrink-0"><span class="block text-sm font-semibold">' + t('nApplicants', { n: apps.length }) + '</span>' + (nNew ? '<span class="' + STATUS_CHIP.new + ' mt-0.5">' + t('nNew', { n: nNew }) + '</span>' : '') + '</span>' + icon('chevron', 'w-4 h-4 text-slate-400') + '</a></li>';
+      }).join('') + '</ul>'
+      : emptyState(t('noCompanyJobs'), t('noCompanyJobsBody'), '<a href="#/post" class="' + C.btnPrimary + '">' + t('postJob') + '</a>'));
+  }
+  const appFilters = { skill: '', level: 0, cert: 'any', country: '', minExp: 0, status: '' };
+  function applicantRows(j) {
+    const f = appFilters;
+    let rows = db.applications.filter(a => a.jobId === j.id).map(a => {
+      const p = getProfile(a.profileId);
+      return p ? { a, p, m: matchJob(j, p.id), certs: certsOf(p.id), exp: experienceYears(p) } : null;
+    }).filter(Boolean);
+    const total = rows.length;
+    rows = rows.filter(({ a, p, certs, exp }) => {
+      if (f.status && a.status !== f.status) return false;
+      if (f.country && p.country !== f.country) return false;
+      if (f.minExp && exp < f.minExp) return false;
+      const sk = f.skill.trim().toLowerCase();
+      const has = sk ? skillsOf(p.id).find(s => s.name.toLowerCase() === sk) : null;
+      if (sk && !has) return false;
+      if (f.level && (sk ? has.level < f.level : !skillsOf(p.id).some(s => s.level >= f.level))) return false;
+      if (f.cert === 'has' && !certCount(p)) return false;
+      if (f.cert === 'skill' && !(sk ? skillProof(p.id, f.skill) === 'certified' : skillsOf(p.id).some(s => skillProof(p.id, s.name) === 'certified'))) return false;
+      return true;
+    }).sort((x, y) => y.m.pct - x.m.pct);
+    return { rows, total };
+  }
+  function viewApplicants(jobId) {
+    const gate = needCompany(); if (gate) return gate;
+    const j = getJob(jobId);
+    if (!j || j.companyId !== myCompany().id) return emptyState(t('jobNotFound'), t('jobNotFoundBody'), '<a href="#/dashboard" class="' + C.btnPrimary + '">' + t('navDashboard') + '</a>');
+    const all = db.applications.filter(a => a.jobId === j.id);
+    const countries = Array.from(new Set(all.map(a => (getProfile(a.profileId) || {}).country).filter(Boolean)));
+    const f = appFilters;
+    const statusTab = (s, label, n) => '<button type="button" data-action="app-status-tab" data-status="' + s + '" aria-pressed="' + (f.status === s) + '" class="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ' + (f.status === s ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700') + '">' + esc(label) + ' <span class="opacity-75">' + n + '</span></button>';
+    return backLink('#/dashboard', t('navDashboard')) +
+      '<div class="flex flex-wrap items-end justify-between gap-3 mb-4"><div><h1 class="' + C.h1 + '">' + esc(j.title) + '</h1><p class="text-sm ' + C.muted + '">' + flag(j.country) + ' ' + esc(j.city) + ' · <a class="text-blue-700 dark:text-blue-300 hover:underline" href="#/job/' + j.id + '">' + t('viewJob') + '</a></p></div></div>' +
+      '<div class="-mx-4 px-4 flex gap-2 overflow-x-auto no-scrollbar mb-3">' + statusTab('', t('all'), all.length) + STATUSES.map(s => statusTab(s, t('status_' + s), all.filter(a => a.status === s).length)).join('') + '</div>' +
+      '<details class="' + C.section + ' mb-4" ' + (f.skill || f.level || f.cert !== 'any' || f.country || f.minExp ? 'open' : '') + '><summary class="cursor-pointer text-sm font-medium flex items-center gap-2">' + icon('sliders', 'w-4 h-4') + t('filterApplicants') + '</summary>' +
+        '<div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">' +
+          '<div class="lg:col-span-1"><label class="' + C.label + '" for="af-skill">' + t('skills') + '</label><input id="af-skill" list="af-skill-list" data-app-filter="skill" value="' + esc(f.skill) + '" class="' + C.input + '" placeholder="' + esc(t('typeSkill')) + '"><datalist id="af-skill-list">' + jobSkills(j).map(s => '<option value="' + esc(s) + '">').join('') + '</datalist></div>' +
+          '<div><label class="' + C.label + '" for="af-level">' + t('level') + '</label><select id="af-level" data-app-filter="level" class="' + C.input + '"><option value="0">' + t('anyLevel') + '</option>' + [1, 2, 3].map(l => '<option value="' + l + '"' + (f.level === l ? ' selected' : '') + '>' + t('atLeast', { lv: t('level_' + l) }) + '</option>').join('') + '</select></div>' +
+          '<div><label class="' + C.label + '" for="af-cert">' + t('certificates') + '</label><select id="af-cert" data-app-filter="cert" class="' + C.input + '"><option value="any">' + t('anyCert') + '</option><option value="has"' + (f.cert === 'has' ? ' selected' : '') + '>' + t('hasCert') + '</option><option value="skill"' + (f.cert === 'skill' ? ' selected' : '') + '>' + t('validCertForSkill') + '</option></select></div>' +
+          '<div><label class="' + C.label + '" for="af-country">' + t('country') + '</label><select id="af-country" data-app-filter="country" class="' + C.input + '"><option value="">' + t('allCountries') + '</option>' + countries.map(c => '<option value="' + c + '"' + (f.country === c ? ' selected' : '') + '>' + flag(c) + ' ' + esc(countryName(c)) + '</option>').join('') + '</select></div>' +
+          '<div><label class="' + C.label + '" for="af-exp">' + t('experience') + '</label><select id="af-exp" data-app-filter="minExp" class="' + C.input + '">' + [0, 1, 3, 5].map(n => '<option value="' + n + '"' + (f.minExp === n ? ' selected' : '') + '>' + (n ? t('atLeastYears', { n }) : t('anyExp')) + '</option>').join('') + '</select></div>' +
+        '</div></details>' +
+      '<div id="applicant-list">' + applicantList(j) + '</div>';
+  }
+  function applicantList(j) {
+    const { rows, total } = applicantRows(j);
+    if (!total) return emptyState(t('noApplicants'), t('noApplicantsBody'));
+    if (!rows.length) return emptyState(t('noApplicantsMatch'), t('noApplicantsMatchBody'), '<button type="button" data-action="reset-app-filters" class="' + C.btnPrimary + '">' + t('resetFilters') + '</button>');
+    return '<ul class="' + C.card + ' ' + C.divider + ' overflow-hidden" data-testid="applicant-list">' + rows.map(({ a, p, m, certs, exp }) =>
+      '<li><a href="#/applicant/' + a.id + '" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500">' + avatar(p.photo, p.fullName, 'w-12 h-12') +
+      '<span class="flex-1 min-w-0"><span class="block font-medium truncate">' + esc(p.fullName) + (p.isDemo ? ' <span class="' + C.chip + ' py-0.5 align-middle">' + t('demoData') + '</span>' : '') + '</span><span class="block text-xs ' + C.muted + '">' + flag(p.country) + ' ' + esc(countryName(p.country)) + ' · ' + t('nYears', { n: fmtNum(exp) }) + ' · ' + esc(fmtDate(a.createdAt)) + '</span>' +
+      '<span class="mt-1 flex flex-wrap items-center gap-1.5">' + matchChip(m.pct) + '<span class="' + C.chip + '">' + icon('award', 'w-3 h-3') + t('nCerts', { n: certCount(p) }) + '</span></span></span>' +
+      '<span class="' + STATUS_CHIP[a.status] + ' shrink-0">' + t('status_' + a.status) + '</span></a></li>').join('') + '</ul>';
+  }
+  function viewApplicant(appId) {
+    const gate = needCompany(); if (gate) return gate;
+    const a = db.applications.find(x => x.id === appId);
+    const j = a && getJob(a.jobId);
+    const p = a && getProfile(a.profileId);
+    if (!a || !j || !p || j.companyId !== myCompany().id) return emptyState(t('applicantNotFound'), t('applicantNotFoundBody'), '<a href="#/dashboard" class="' + C.btnPrimary + '">' + t('navDashboard') + '</a>');
+    const attached = db.certificates.filter(c => a.certIds.includes(c.id));
+    const statusBtn = s => '<button type="button" data-action="set-status" data-app="' + a.id + '" data-status="' + s + '" aria-pressed="' + (a.status === s) + '" class="rounded-lg px-3 py-2 text-sm font-medium ' + (a.status === s ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700') + '">' + t('status_' + s) + '</button>';
+    const aside = '<section class="' + C.section + '"><h2 class="font-semibold mb-2">' + t('applicationStatus') + '</h2><div class="flex flex-wrap gap-2" data-testid="status-buttons">' + STATUSES.map(statusBtn).join('') + '</div>' +
+        '<p class="mt-3 text-xs ' + C.muted + '">' + t('appliedOn', { d: fmtDate(a.createdAt) }) + '</p></section>' +
+      '<section class="' + C.section + '"><h2 class="font-semibold mb-3">' + t('matchForJob') + '</h2>' + matchPanel(j, p.id, true) + '</section>' +
+      '<section class="' + C.section + '"><h2 class="font-semibold mb-2">' + t('message') + '</h2><p class="text-sm whitespace-pre-line" dir="auto">' + (a.message ? esc(a.message) : '<span class="' + C.muted + '">' + t('noMessage') + '</span>') + '</p></section>' +
+      '<section class="' + C.section + '" data-testid="attached-certs"><h2 class="font-semibold mb-2">' + t('attachedCerts', { n: attached.length }) + '</h2>' +
+        (p.privacy.showCerts ? (attached.length ? '<div class="space-y-4">' + attached.map(c => certCard(c)).join('') + '</div>' : '<p class="text-sm ' + C.muted + '">' + t('noAttached') + '</p>')
+          : '<p class="text-sm ' + C.muted + '">' + t('certsHiddenByCandidate') + '</p>') + '</section>';
+    return backLink('#/dashboard/' + j.id, j.title) +
+      '<div class="lg:grid lg:grid-cols-3 lg:gap-6"><div class="lg:col-span-2 space-y-4">' + renderCV(p, 'company', { hideCerts: false }) + '</div><div class="mt-4 lg:mt-0 space-y-4">' + aside + '</div></div>';
+  }
+
+  /* ==========================================================================
+     Routing
+     ========================================================================== */
+  let renderSeq = 0, lastPath = null;
+  async function render() {
+    const r = route();
+    const [a, b] = r.parts;
+    const path = r.parts.join('/');
+    const changed = path !== lastPath; lastPath = path;
+    const seq = ++renderSeq;
+    if (a !== 'register' && draft) draft.stepHash = null;
+    renderChrome();
+    const view = $('#view');
+    let html;
+    if (loadState !== 'ready') {
+      view.innerHTML = loadState === 'error'
+        ? '<div data-testid="load-error">' + emptyState(t('loadFailed'), t('loadFailedBody'), '<button type="button" data-action="retry-load" class="' + C.btnPrimary + '">' + t('retry') + '</button>') + '</div>'
+        : spinner();
+      return;
+    }
+    // Screens that show data other people write (applications, a shared
+    // profile, an applicant's status) refetch it each time they are opened.
+    const co = myCompany();
+    if (changed && co && (!a || a === 'dashboard' || a === 'applicant')) {
+      view.innerHTML = spinner();
+      try { await api.loadCompanyApplications(co.id); } catch (e) { toast(t('loadFailed')); }
+      if (seq !== renderSeq) return;
+    } else if (changed && a === 'p' && b && !(me && me.profileId === b)) {
+      view.innerHTML = spinner();
+      try { await api.loadProfile(b); } catch (e) { /* the view shows not-found */ }
+      if (seq !== renderSeq) return;
+    } else if (changed && a === 'profile' && role() === 'seeker') {
+      try { await api.bootstrap(); } catch (e) {}
+      if (seq !== renderSeq) return;
+    }
+    if (a === 'job') {
+      view.innerHTML = viewJobSkeleton();
+      const j = await api.getJob(b);
+      if (seq !== renderSeq) return;
+      html = viewJob(j);
+    } else if (!a) html = viewHome();
+    else if (a === 'jobs') html = viewJobs();
+    else if (a === 'saved') html = viewSaved();
+    else if (a === 'skills') html = viewSkills();
+    else if (a === 'countries') html = viewCountries();
+    else if (a === 'auth') html = r.query.get('company') === '1' ? viewCompanySignup() : viewAuth();
+    else if (a === 'register') html = viewRegister();
+    else if (a === 'profile') html = viewProfile();
+    else if (a === 'p') html = viewPublicProfile(b);
+    else if (a === 'post') html = viewPost();
+    else if (a === 'dashboard') {
+      if (b && appFilters.jobId !== b) Object.assign(appFilters, { jobId: b, skill: '', level: 0, cert: 'any', country: '', minExp: 0, status: '' });
+      html = b ? viewApplicants(b) : viewDashboard();
+    }
+    else if (a === 'applicant') html = viewApplicant(b);
+    else html = emptyState(t('pageNotFound'), t('pageNotFoundBody'), '<a href="#/" class="' + C.btnPrimary + '">' + t('navHome') + '</a>');
+    view.innerHTML = html;
+    if (changed) window.scrollTo(0, 0);
+    if (a === 'jobs') refreshResults();
+  }
+  function rerenderKeepFocus(selector) {
+    render().then(() => { const el = selector && $(selector); if (el) el.focus({ preventScroll: true }); });
+  }
+
+  /* ==========================================================================
+     Events (delegated)
+     ========================================================================== */
+  let debounceT = null;
+  function debounced(fn, ms) { clearTimeout(debounceT); debounceT = setTimeout(fn, ms || 250); }
+  function onJobs() { return route().parts[0] === 'jobs'; }
+
+  function setBookmarkButtons(id, saved) {
+    $$('[data-action="bookmark"][data-id="' + id + '"]').forEach(btn => {
+      btn.setAttribute('aria-pressed', saved);
+      const svg = btn.querySelector('svg'); if (svg) svg.setAttribute('fill', saved ? 'currentColor' : 'none');
+      if (btn.getAttribute('aria-label')) btn.setAttribute('aria-label', t(saved ? 'unsave' : 'save'));
+      btn.classList.toggle('text-blue-600', saved); btn.classList.toggle('dark:text-blue-400', saved);
+      if (btn.lastChild && btn.lastChild.nodeType === 3) btn.lastChild.textContent = t(saved ? 'saved' : 'save');
+    });
+  }
+
+  function addSkillFrom(wrapper, name) {
+    name = canonicalSkill(name || '');
+    const key = wrapper.dataset.skillInput;
+    const input = wrapper.querySelector('[data-skill-text]');
+    if (!name) { input.focus(); return; }
+    SKILL_ADD[key](name);
+    const again = $('[data-skill-input="' + key + '"] [data-skill-text]');
+    if (again) { again.value = ''; again.focus({ preventScroll: true }); }
+  }
+  SKILL_ADD.filter = name => {
+    if (!filters.skills.some(s => s.toLowerCase() === name.toLowerCase())) filters.skills.push(name);
+    refreshFilterHosts(); refreshResults();
+  };
+  SKILL_ADD.draft = name => {
+    if (draft.skills.some(s => s.name.toLowerCase() === name.toLowerCase())) { toast(t('skillExists')); return; }
+    draft.skills.push({ id: uid('s'), name, level: 2, years: 1 }); delete draft.errors.skills; render();
+  };
+  SKILL_ADD['post-required'] = name => addPostSkill('required', name);
+  SKILL_ADD['post-nice'] = name => addPostSkill('nice', name);
+  function addPostSkill(kind, name) {
+    const d = postDraft;
+    if (d.required.concat(d.nice).some(s => s.name.toLowerCase() === name.toLowerCase())) { toast(t('skillExists')); return; }
+    d[kind].push({ name, level: 2 }); delete d.errors.required; render();
+  }
+  function suggestExclusions(key) {
+    if (key === 'filter') return filters.skills;
+    if (key === 'draft') return draft ? draft.skills.map(s => s.name) : [];
+    if (postDraft) return postDraft.required.concat(postDraft.nice).map(s => s.name);
+    return [];
+  }
+  function showSuggestions(wrapper) {
+    const input = wrapper.querySelector('[data-skill-text]');
+    const box = wrapper.querySelector('[data-skill-suggest]');
+    const list = suggestSkills(input.value, suggestExclusions(wrapper.dataset.skillInput));
+    box.innerHTML = list.map((s, i) => '<li role="option" id="sg-' + i + '"><button type="button" data-suggest-item="' + esc(s) + '" class="w-full text-start px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800' + (i === 0 ? ' bg-slate-50 dark:bg-slate-800/60' : '') + '">' + esc(s) + '</button></li>').join('');
+    box.classList.toggle('hidden', !list.length);
+    input.setAttribute('aria-expanded', list.length ? 'true' : 'false');
+  }
+  function hideSuggestions() { $$('[data-skill-suggest]').forEach(b => b.classList.add('hidden')); }
+
+  function openRates() {
+    openModal('<p class="text-sm ' + C.muted + ' mb-3">' + t('ratesBody', { date: fmtDate(RATES_DATE) }) + '</p><table class="w-full text-sm"><thead><tr class="text-start ' + C.muted + '"><th class="py-1.5 font-medium">' + t('currency') + '</th><th class="py-1.5 font-medium text-end">1 USD =</th></tr></thead><tbody class="' + C.divider + '">' +
+      Object.entries(RATES).map(([c, r]) => '<tr><td class="py-1.5 font-medium">' + c + '</td><td class="py-1.5 text-end tabular-nums">' + new Intl.NumberFormat(locale(), { maximumFractionDigits: 4 }).format(r) + ' ' + c + '</td></tr>').join('') + '</tbody></table>', { title: t('ratesTitle') });
+  }
+  function openFiltersModal() {
+    openModal('<div data-filter-host>' + filterForm() + '</div><button type="button" data-action="modal-close" class="' + C.btnPrimary + ' w-full mt-4">' + t('showResults') + '</button>', { title: t('filters'), onClose: refreshFilterHosts });
+  }
+  function openCertViewer(c) {
+    const f = c.file || {};
+    const src = fileSrc(f);
+    const body = !src ? '<div class="text-center py-10 text-sm ' + C.muted + '">' + icon('file', 'w-10 h-10 mx-auto mb-2') + t('fileNotAvailable') + '</div>'
+      : f.type === 'application/pdf'
+      ? '<object data="' + esc(src) + '" type="application/pdf" class="w-full rounded-xl" style="height:65vh"><div class="text-center py-8">' + icon('file', 'w-10 h-10 mx-auto text-red-600') + '<p class="mt-2 text-sm">' + esc(f.name) + '</p><a href="' + esc(src) + '" download="' + esc(f.name) + '" class="mt-3 ' + C.btnPrimary + '">' + t('downloadPdf') + '</a></div></object>'
+      : '<img src="' + esc(src) + '" alt="' + esc(c.name) + '" class="w-full rounded-xl bg-slate-100 dark:bg-slate-800">';
+    openModal(body + '<div class="mt-3 text-sm"><p class="font-medium">' + esc(c.name) + '</p><p class="' + C.muted + '">' + esc(c.issuer) + ' · ' + esc(fmtDate(c.issueDate)) + (c.expiryDate ? ' · ' + t('validUntil', { d: fmtDate(c.expiryDate) }) : '') + '</p>' +
+      (certExpired(c) ? '<p class="mt-1 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300">' + icon('alert', 'w-3.5 h-3.5') + t('certExpiredLong') + '</p>' : '') + '</div>', { title: t('certificate'), wide: true });
+  }
+
+  document.addEventListener('click', async e => {
+    const sug = e.target.closest('[data-suggest-item]');
+    if (sug) { addSkillFrom(sug.closest('[data-skill-input]'), sug.dataset.suggestItem); hideSuggestions(); return; }
+    if (!e.target.closest('[data-skill-input]')) hideSuggestions();
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const act = el.dataset.action;
+    const inModal = !!el.closest('[data-modal-body]');
+    switch (act) {
+      case 'modal-close': closeModal(); break;
+      case 'retry-load': boot(); break;
+      case 'quick-country':
+        openCountryPicker(cc => { filters.country = cc; filters.city = ''; go('#/jobs'); }, { allowAll: true, showCounts: true, title: t('quickCountry') }); break;
+      case 'pick-lang': openLanguagePicker(); break;
+      case 'toggle-theme': {
+        const dark = document.documentElement.classList.contains('dark');
+        try { localStorage.setItem('lokerdunia.theme', dark ? 'light' : 'dark'); } catch (err) {}
+        if (!window.__applyTheme || window.__applyTheme() === (dark ? 'dark' : 'light')) document.documentElement.classList.toggle('dark', !dark);
+        renderChrome(); break;
+      }
+      case 'bookmark': {
+        e.preventDefault();
+        let saved;
+        try { saved = await api.toggleBookmark(el.dataset.id); } catch (err) { toast(t('saveFailed')); break; }
+        toast(t(saved ? 'savedToast' : 'unsavedToast'));
+        if (route().parts[0] === 'saved') render(); else setBookmarkButtons(el.dataset.id, saved);
+        break;
+      }
+      case 'pick-category': filters = emptyFilters(); filters.category = el.dataset.cat; go('#/jobs'); break;
+      case 'search-skill': filters = emptyFilters(); filters.skills = [el.dataset.skill]; go('#/jobs'); break;
+      case 'browse-country': filters = emptyFilters(); filters.country = el.dataset.cc; go('#/jobs'); break;
+      case 'browse-rw': filters = emptyFilters(); filters.rw = true; go('#/jobs'); break;
+      case 'open-filters': openFiltersModal(); break;
+      case 'toggle-match':
+        ui.matchMode = !ui.matchMode;
+        if (!ui.matchMode && route().query.get('match') === '1') go('#/jobs'); else render();
+        break;
+      case 'filter-country':
+        openCountryPicker(cc => { filters.country = cc; filters.city = ''; refreshFilterHosts(); refreshResults(); if (inModal) openFiltersModal(); }, { allowAll: true, showCounts: true });
+        break;
+      case 'filter-skill-remove': filters.skills = filters.skills.filter(s => s !== el.dataset.skill); refreshFilterHosts(); refreshResults(); break;
+      case 'skill-add': { const w = el.closest('[data-skill-input]'); addSkillFrom(w, w.querySelector('[data-skill-text]').value); hideSuggestions(); break; }
+      case 'show-rates': openRates(); break;
+      case 'reset-filters': filters = emptyFilters(); renderChrome(); refreshFilterHosts(); refreshResults(); break;
+      case 'clear-filter': {
+        const k = el.dataset.key, v = el.dataset.val;
+        if (Array.isArray(filters[k])) filters[k] = filters[k].filter(x => x !== v);
+        else filters[k] = typeof filters[k] === 'boolean' ? false : '';
+        if (k === 'q') $$('[data-search-input]').forEach(i => { i.value = ''; });
+        refreshFilterHosts(); refreshResults(); break;
+      }
+      case 'apply': openApply(el.dataset.id); break;
+      case 'auth-tab': authTab = el.dataset.tab; if (route().query.get('tab')) go('#/auth?tab=' + authTab); else render(); break;
+      case 'choose-role':
+        if (el.dataset.role === 'company') { companyDraft = { name: '', country: '', city: '', industry: 'it', errors: {} }; go('#/auth?company=1'); break; }
+        try { await api.setRole('seeker'); } catch (err) { toast(t('saveFailed')); break; }
+        draft = null;
+        go(me.profileId ? '#/profile' : '#/register');
+        break;
+      case 'sign-in': {
+        const kind = el.dataset.kind;
+        try { await api.setRole(kind, kind === 'company' ? el.dataset.id : undefined); } catch (err) { toast(t('saveFailed')); break; }
+        draft = null; postDraft = null;
+        toast(t('signedInAs', { name: kind === 'seeker' ? (myProfile() || {}).fullName || '' : (myCompany() || {}).name || '' }));
+        go(kind === 'company' ? '#/dashboard' : (me.profileId ? '#/profile' : '#/register')); break;
+      }
+      case 'sign-out':
+        try { await api.setRole(null); } catch (err) { toast(t('saveFailed')); break; }
+        draft = null; postDraft = null; ui.matchMode = false; toast(t('signedOut')); go('#/'); break;
+      case 'cd-country': openCountryPicker(cc => { companyDraft.country = cc; delete companyDraft.errors.country; render(); }); break;
+      case 'draft-country':
+        openCountryPicker(cc => {
+          setPath(draft, el.dataset.path, cc); delete draft.errors[el.dataset.path];
+          if (el.dataset.path === 'bio.country') { if (!draft.bio.phoneCode) draft.bio.phoneCode = cc; if (!draft.bio.nationality) draft.bio.nationality = cc; }
+          render();
+        }); break;
+      case 'add-entry': {
+        const list = el.dataset.list;
+        const blank = { education: { level: '', institution: '', major: '', year: '' }, experience: { position: '', company: '', start: '', end: '', current: false, description: '' }, languages: { code: '', level: 'intermediate' } }[list];
+        draft[list].push({ id: uid('n'), ...blank }); delete draft.errors[list];
+        await render();
+        const entries = $$('[data-entry]'); const last = list === 'languages' ? null : entries[entries.length - 1];
+        if (list === 'experience' || list === 'education') {
+          const first = $$('[data-draft^="' + list + '.' + (draft[list].length - 1) + '."]')[0]; if (first) first.focus();
+        } else if (last) last.querySelector('input,select').focus();
+        break;
+      }
+      case 'remove-entry': draft[el.dataset.list].splice(Number(el.dataset.i), 1); draft.errors = {}; render(); break;
+      case 'goto-step': if (Number(el.dataset.step) < draft.step) { draft.step = Number(el.dataset.step); draft.errors = {}; render().then(() => window.scrollTo(0, 0)); } break;
+      case 'step-back': draft.step = Math.max(1, draft.step - 1); draft.errors = {}; render().then(() => window.scrollTo(0, 0)); break;
+      case 'add-cert': {
+        if (draft.uploading) { toast(t('uploading')); break; }
+        const errs = validateCertForm();
+        Object.keys(draft.errors).filter(k => k.startsWith('certForm.')).forEach(k => delete draft.errors[k]);
+        if (Object.keys(errs).length) { Object.assign(draft.errors, errs); await render(); focusFirstError(); break; }
+        draft.certificates.push({ ...draft.certForm, id: uid('c'), skills: draft.certForm.skills.slice() });
+        draft.certForm = blankCert(); await render(); toast(t('certAdded')); break;
+      }
+      case 'view-cert': {
+        const c = (el.dataset.src === 'draft' ? draft.certificates : db.certificates).find(x => x.id === el.dataset.id);
+        if (c) openCertViewer(c); break;
+      }
+      case 'share-profile': {
+        const p = myProfile(); if (!p) break;
+        const url = location.origin + '/p/' + p.id;
+        try { await navigator.clipboard.writeText(url); toast(t('linkCopied')); }
+        catch (err) {
+          openModal('<p class="text-sm mb-2">' + t('copyManually') + '</p><input readonly class="' + C.input + '" value="' + esc(url) + '" data-select-all>', { title: t('shareProfile') });
+          const i = $('[data-select-all]'); if (i) i.select();
+        }
+        break;
+      }
+      case 'post-country':
+        openCountryPicker(cc => { postDraft.country = cc; postDraft.currency = COUNTRY_CURRENCY[cc] || postDraft.currency; postDraft.timezone = COUNTRY_TZ[cc] || postDraft.timezone; delete postDraft.errors.country; render(); }); break;
+      case 'post-skill-remove': postDraft[el.dataset.kind].splice(Number(el.dataset.i), 1); render(); break;
+      case 'post-lang-add': postDraft.languages.push({ code: 'en', level: 'intermediate' }); render(); break;
+      case 'post-lang-remove': postDraft.languages.splice(Number(el.dataset.i), 1); render(); break;
+      case 'app-status-tab': appFilters.status = el.dataset.status; render(); break;
+      case 'reset-app-filters': Object.assign(appFilters, { skill: '', level: 0, cert: 'any', country: '', minExp: 0, status: '' }); render(); break;
+      case 'set-status':
+        try { await api.setStatus(el.dataset.app, el.dataset.status); } catch (err) { toast(t('saveFailed')); break; }
+        toast(t('statusUpdated', { s: t('status_' + el.dataset.status) })); render(); break;
+    }
+  });
+
+  document.addEventListener('input', e => {
+    const el = e.target;
+    if (el.matches('[data-search-input]')) {
+      filters.q = el.value;
+      $$('[data-search-input]').forEach(i => { if (i !== el) i.value = el.value; });
+      if (onJobs()) debounced(refreshResults, 300);
+      return;
+    }
+    if (el.matches('[data-skill-text]')) { showSuggestions(el.closest('[data-skill-input]')); return; }
+    if (el.matches('input[data-filter]')) { filters[el.dataset.filter] = el.value; debounced(refreshResults, 350); return; }
+    if (el.matches('[data-draft]') && draft) {
+      setPath(draft, el.dataset.draft, el.value);
+      if (draft.errors[el.dataset.draft]) { delete draft.errors[el.dataset.draft]; const p = el.parentElement.querySelector('[data-err]'); if (p) p.remove(); el.className = C.input; }
+      return;
+    }
+    if (el.matches('[data-cd]')) { companyDraft[el.dataset.cd] = el.value; return; }
+    if (el.matches('[data-post]') && postDraft) { postDraft[el.dataset.post] = el.value; return; }
+    if (el.matches('[data-country-query]')) {
+      countryQuery = el.value;
+      const counts = {}; db.jobs.forEach(j => { counts[j.country] = (counts[j.country] || 0) + 1; });
+      const list = Object.keys(counts).filter(c => !countryQuery || countryName(c).toLowerCase().includes(countryQuery.toLowerCase())).sort((a, b) => counts[b] - counts[a]);
+      $('[data-country-grid]').innerHTML = countryGrid(list, counts, db.jobs.filter(j => j.remoteWorldwide).length);
+      return;
+    }
+    if (el.matches('input[data-app-filter]')) {
+      appFilters.skill = el.value;
+      debounced(() => { const j = getJob(route().parts[1]); if (j && $('#applicant-list')) $('#applicant-list').innerHTML = applicantList(j); }, 250);
+    }
+  });
+
+  document.addEventListener('change', async e => {
+    const el = e.target;
+    if (el.matches('select[data-filter]')) { filters[el.dataset.filter] = el.value; refreshResults(); return; }
+    if (el.matches('[data-filter-multi]')) {
+      const k = el.dataset.filterMulti;
+      filters[k] = el.checked ? filters[k].concat(el.value) : filters[k].filter(x => x !== el.value);
+      refreshResults(); return;
+    }
+    if (el.matches('[data-filter-bool]')) { filters[el.dataset.filterBool] = el.checked; refreshResults(); return; }
+    if (el.matches('[data-pref-cur]')) { prefs.cur = el.value; filters.salaryMin = ''; filters.salaryMax = ''; savePrefs(); refreshFilterHosts(); refreshResults(); return; }
+    if (el.matches('[data-action-change="sort"]')) { ui.sort = el.value; refreshResults(); return; }
+    if (el.matches('[data-insight]')) { insight[el.dataset.insight] = el.value; render(); return; }
+    if (el.matches('[data-draft-check]') && draft) { setPath(draft, el.dataset.draftCheck, el.checked); render(); return; }
+    if (el.matches('select[data-draft]') && draft) {
+      const path = el.dataset.draft;
+      setPath(draft, path, /^skills\.\d+\.level$/.test(path) ? Number(el.value) : el.value);
+      if (/^skills\.\d+\.level$/.test(path)) rerenderKeepFocus('[data-draft="' + path + '"]');
+      return;
+    }
+    if (el.matches('[data-cert-skill]') && draft) {
+      const s = draft.certForm.skills;
+      draft.certForm.skills = el.checked ? s.concat(el.value) : s.filter(x => x !== el.value);
+      return;
+    }
+    if (el.matches('[data-file]') && draft) {
+      const file = el.files && el.files[0]; if (!file) return;
+      const which = el.dataset.file;
+      const okTypes = which === 'photo' ? ['image/jpeg', 'image/png', 'image/webp'] : ['image/jpeg', 'image/png', 'application/pdf'];
+      const errKey = which === 'photo' ? 'bio.photo' : 'certForm.file';
+      delete draft.errors[errKey];
+      if (!okTypes.includes(file.type)) draft.errors[errKey] = t(which === 'photo' ? 'errPhotoType' : 'errFileType');
+      else if (file.size > 5 * 1024 * 1024) draft.errors[errKey] = t('errFileSize');
+      else {
+        try {
+          const dataUrl = await readFile(file, which === 'photo' ? 320 : 1600);
+          const type = dataUrl.startsWith('data:application/pdf') ? 'application/pdf' : (dataUrl.slice(5, dataUrl.indexOf(';')) || file.type);
+          // Preview straight away from the local copy, then store the file.
+          if (which === 'cert') draft.certForm.file = { dataUrl, type, name: file.name, size: file.size, url: '', id: '', uploading: type !== 'application/pdf' };
+          draft.uploading = which; await render();
+          const stored = type === 'application/pdf' ? null : await uploadImage(dataUrl, file.name, which === 'photo' ? 'public' : 'private');
+          draft.uploading = null;
+          if (which === 'photo') {
+            if (stored) draft.bio.photo = stored.url; else draft.errors[errKey] = t('uploadUnavailable');
+          } else {
+            Object.assign(draft.certForm.file, { uploading: false, url: stored ? stored.url : '', id: stored ? stored.id : '', localOnly: !stored });
+            if (!stored) toast(t(type === 'application/pdf' ? 'pdfNotStored' : 'uploadUnavailable'));
+          }
+        } catch (err) { draft.uploading = null; draft.errors[errKey] = t('errFileRead'); }
+      }
+      await render(); if (draft.errors[errKey]) focusFirstError();
+      return;
+    }
+    if (el.matches('[data-privacy]')) {
+      const p = myProfile(); if (!p) return;
+      const next = { ...p.privacy, [el.dataset.privacy]: el.checked };
+      try { await api.setPrivacy(next); toast(t('privacySaved')); }
+      catch (err) { el.checked = !el.checked; toast(t('saveFailed')); }
+      return;
+    }
+    if (el.matches('[data-cd]')) { companyDraft[el.dataset.cd] = el.value; return; }
+    if (el.matches('select[data-post]') && postDraft) { postDraft[el.dataset.post] = el.value; return; }
+    if (el.matches('[data-post-bool]') && postDraft) { postDraft[el.dataset.postBool] = el.checked; return; }
+    if (el.matches('[data-post-level]') && postDraft) { postDraft[el.dataset.postLevel][Number(el.dataset.i)].level = Number(el.value); return; }
+    if (el.matches('[data-post-lang]') && postDraft) { postDraft.languages[Number(el.dataset.i)][el.dataset.postLang] = el.value; return; }
+    if (el.matches('select[data-app-filter]')) {
+      const k = el.dataset.appFilter;
+      appFilters[k] = (k === 'level' || k === 'minExp') ? Number(el.value) : el.value;
+      const j = getJob(route().parts[1]); if (j) $('#applicant-list').innerHTML = applicantList(j);
+    }
+  });
+
+  document.addEventListener('submit', async e => {
+    const form = e.target;
+    if (form.matches('[data-search-form]')) {
+      e.preventDefault();
+      filters.q = form.querySelector('input').value;
+      form.querySelector('input').blur();
+      if (onJobs()) refreshResults(); else go('#/jobs');
+      return;
+    }
+    const kind = form.dataset.form;
+    if (!kind) return;
+    e.preventDefault();
+    if (kind === 'register') {
+      const errs = validateStep(draft.step);
+      if (Object.keys(errs).length) { draft.errors = errs; await render(); focusFirstError(); return; }
+      draft.errors = {};
+      if (draft.step < 4) { draft.step++; await render(); window.scrollTo(0, 0); return; }
+      const f = draft.certForm;
+      if (f.file || f.name.trim()) {
+        const ce = validateCertForm();
+        if (Object.keys(ce).length) { draft.errors = ce; await render(); focusFirstError(); toast(t('finishCertFirst')); return; }
+        draft.certificates.push({ ...f, id: uid('c'), skills: f.skills.slice() }); draft.certForm = blankCert();
+      }
+      finishRegister(form.querySelector('[data-finish]'));
+    }
+    if (kind === 'company-signup') {
+      const d = companyDraft; d.errors = {};
+      if (!d.name.trim()) d.errors.name = t('errRequired');
+      if (!d.country) d.errors.country = t('errRequired');
+      if (!d.city.trim()) d.errors.city = t('errRequired');
+      if (Object.keys(d.errors).length) { await render(); focusFirstError(); return; }
+      const btn = form.querySelector('[type=submit]'); btn.disabled = true;
+      let co;
+      try { co = await api.createCompany({ name: d.name.trim(), country: d.country, city: d.city.trim(), industry: d.industry }); }
+      catch (err) {
+        btn.disabled = false;
+        if (err.code === 'name_taken') { d.errors.name = t('errNameTaken'); await render(); focusFirstError(); } else toast(t('saveFailed'));
+        return;
+      }
+      postDraft = null;
+      toast(t('welcomeCompany', { co: co.name }));
+      go('#/dashboard');
+    }
+    if (kind === 'apply') {
+      const btn = form.querySelector('[data-submit]');
+      btn.disabled = true; btn.innerHTML = '<span class="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin motion-reduce:animate-none"></span>' + t('sending');
+      const j = getJob(form.dataset.job);
+      const certIds = $$('input[name="cert"]:checked', form).map(i => i.value);
+      try { await api.apply(j.id, certIds, form.querySelector('[name="message"]').value.trim()); }
+      catch (err) {
+        btn.disabled = false; btn.textContent = t('sendApplication');
+        toast(t(err.code === 'already_applied' ? 'alreadyAppliedErr' : 'saveFailed'));
+        if (err.code === 'already_applied') { closeModal(); api.bootstrap().then(render); }
+        return;
+      }
+      closeModal();
+      toast(t('applySuccess', { co: companyOf(j).name }));
+      render();
+    }
+    if (kind === 'post') submitPost(form.querySelector('[data-submit]'));
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { if ($$('[data-skill-suggest]:not(.hidden)').length) { hideSuggestions(); return; } if (modalClose) { closeModal(); return; } }
+    if (e.key === 'Enter' && e.target.matches('[data-skill-text]')) {
+      e.preventDefault();
+      const w = e.target.closest('[data-skill-input]');
+      const first = w.querySelector('[data-suggest-item]');
+      const typed = e.target.value.trim();
+      const exact = suggestSkills(typed, []).find(s => s.toLowerCase() === typed.toLowerCase());
+      addSkillFrom(w, exact || (first && !w.querySelector('[data-skill-suggest]').classList.contains('hidden') ? first.dataset.suggestItem : typed));
+      hideSuggestions();
+    }
+  });
+
+  window.addEventListener('hashchange', () => { closeModal(); render(); });
+  window.addEventListener('usernode:theme-changed', () => renderChrome());
+
+  /* ---------- boot ---------- */
+  async function boot() {
+    // A saved language other than English is fetched before the first paint.
+    try { await loadLang(lang); }
+    catch (e) { console.warn(e.message); lang = DEFAULT_LANG; }
+    loadState = 'loading'; render();
+    try { await api.bootstrap(); loadState = 'ready'; }
+    catch (e) { console.warn('bootstrap failed: ' + e.message); loadState = 'error'; }
+    lastPath = null; render();
+  }
+  (function start() {
+    // Shared profile links arrive as /p/<id>; the app itself routes by hash.
+    const m = location.pathname.match(/^\/p\/([A-Za-z0-9_-]+)\/?$/);
+    if (m) history.replaceState(null, '', '/' + location.search + '#/p/' + m[1]);
+    if (window.usernode && usernode.issueState && usernode.issueState.register) {
+      usernode.issueState.register(() => ({ route: location.hash, role: role(), lang, loadState, jobs: db.jobs.length, applications: db.applications.length, filters: { ...filters, q: filters.q ? '[set]' : '' } }));
+    }
+    boot();
+  })();
+  </script>
+</body>
+</html>

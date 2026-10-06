@@ -1,0 +1,78 @@
+{
+  "name": "Loker Dunia (remix)",
+  "description": "Papan lowongan kerja global dengan pencocokan skill dan sertifikat",
+  "secrets": [],
+  "tests": [
+    {
+      "name": "Header logo shows a person searching for a job",
+      "path": "/",
+      "expectSelector": "#hdr [data-testid=app-logo][data-logo=seeker] svg"
+    },
+    {
+      "name": "Header shows the language switcher, English by default",
+      "path": "/",
+      "expectSelector": "#hdr [data-testid=lang-switcher][data-lang=en]"
+    },
+    {
+      "name": "Page is in English, left to right, by default",
+      "path": "/",
+      "expectSelector": "html[lang=en][dir=ltr] [data-testid=job-card]"
+    },
+    {
+      "name": "Home lists latest jobs",
+      "path": "/",
+      "expectSelector": "[data-testid=job-card]",
+      "expectText": "Latest jobs"
+    },
+    {
+      "id": "jobs.search",
+      "name": "Job search renders job cards",
+      "path": "/#/jobs",
+      "expectSelector": "#results [data-testid=job-card]",
+      "visual": true,
+      "impact": [
+        "public/index.html",
+        "public/i18n/**"
+      ]
+    },
+    {
+      "name": "Job detail shows required skills and apply",
+      "path": "/#/job/j1",
+      "expectSelector": "[data-testid=job-skill-lists]",
+      "expectText": "Apply Now"
+    },
+    {
+      "name": "Most wanted skills ranking",
+      "path": "/#/skills",
+      "expectSelector": "[data-testid=skill-ranking] li"
+    },
+    {
+      "name": "Explore by country",
+      "path": "/#/countries",
+      "expectSelector": "[data-testid=country-grid] button"
+    },
+    {
+      "name": "Sign up offers both roles",
+      "path": "/#/auth",
+      "expectSelector": "[data-testid=role-choice]",
+      "expectText": "Company"
+    },
+    {
+      "name": "Saved page empty state",
+      "path": "/#/saved",
+      "expectText": "No saved jobs yet"
+    },
+    {
+      "name": "Sign-in lists the staging demo employer from the server",
+      "path": "/#/auth?tab=login",
+      "expectSelector": "[data-action=sign-in][data-id=nusantara]",
+      "expectText": "PT Nusantara Digital"
+    },
+    {
+      "name": "Job detail loads a server-seeded job",
+      "path": "/#/job/j17",
+      "expectSelector": "[data-testid=job-skill-lists]",
+      "expectText": "Maple Leaf Commerce"
+    }
+  ]
+}
