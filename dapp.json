@@ -74,5 +74,9 @@
       "expectSelector": "[data-testid=job-skill-lists]",
       "expectText": "Maple Leaf Commerce"
     }
-  ]
+  ],
+  "icon": {
+    "image": "brand/icon.png",
+    "emoji": "💼"
+  }
 }
